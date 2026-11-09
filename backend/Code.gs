@@ -26,7 +26,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-08.1';
+const BACKEND_VERSION = '2026-11-08.2';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -75,7 +75,7 @@ function doPost(e) {
   let b = {};
   try { b = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'bad request' }); }
   if (b.website) return json_({ ok: true });                       // honeypot
-  if (b.action === 'sync') return json_(syncNow_());
+  if (b.action === 'sync') return json_(syncNow_(b.sha));
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -378,20 +378,21 @@ function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).se
 
 function autoUpdate() { selfUpdate_(false); }
 
-function syncNow_() {
+function syncNow_(sha) {
   const cache = CacheService.getScriptCache();
   if (cache.get('sync')) return { ok: true, skipped: 'rate limited' };
   cache.put('sync', '1', 20);
-  return selfUpdate_(false);
+  return selfUpdate_(false, sha);
 }
 
-function selfUpdate_(force) {
+function selfUpdate_(force, sha) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { ok: false, error: 'busy' };
   try {
-    const bust = '?t=' + Date.now();
-    const code = UrlFetchApp.fetch(REPO_RAW + 'Code.gs' + bust, { muteHttpExceptions: true });
-    const manifest = UrlFetchApp.fetch(REPO_RAW + 'appsscript.json' + bust, { muteHttpExceptions: true });
+    // raw.githubusercontent.com caches `main` for ~5 min; a commit SHA (sent by `sync` right after a push) is always fresh
+    const base_ = /^[0-9a-f]{40}$/.test(String(sha || '')) ? REPO_RAW.replace('/main/', '/' + sha + '/') : REPO_RAW;
+    const code = UrlFetchApp.fetch(base_ + 'Code.gs', { muteHttpExceptions: true });
+    const manifest = UrlFetchApp.fetch(base_ + 'appsscript.json', { muteHttpExceptions: true });
     if (code.getResponseCode() !== 200 || manifest.getResponseCode() !== 200) return { ok: false, error: 'fetch ' + code.getResponseCode() };
     const src = code.getContentText(), man = manifest.getContentText();
     if (src.indexOf('function doGet') < 0 || src.indexOf('function selfUpdate_') < 0) return { ok: false, error: 'sanity check failed' };

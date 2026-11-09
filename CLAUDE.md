@@ -9,7 +9,8 @@ Owner: Gyeom (gyeomcc@gmail.com). Sale ends Dec 3, 2026. Downtown Brooklyn, 1 mi
 - `backend/Code.gs` + `backend/appsscript.json` — Google Apps Script web app bound to nothing (opens the sheet by ID).
   **It self-deploys**: every 5 min it pulls these two files from `main` on raw.githubusercontent.com, replaces its own
   code via the Apps Script API and moves the web-app deployment to the new version. To deploy instantly after a push,
-  POST `{"action":"sync"}` to the web app URL (e.g. from the browser pane on the site's origin).
+  POST `{"action":"sync","sha":"<40-char commit sha>"}` to the web app URL (e.g. from the browser pane on the
+  site's origin) — the SHA bypasses raw.githubusercontent.com caching of `main`.
   Never break `selfUpdate_` / `doGet` — a broken updater can't fix itself. Always `node --check` before pushing.
 - Google Sheet `1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk`
   - `Move Out Sale` tab: items. Status dropdown: Posted / Reserved / Sold / On Hold. Column M = Photo (Drive link).
