@@ -1,0 +1,15 @@
+name: Check backend
+on:
+  push:
+    paths: ['backend/**']
+  pull_request:
+    paths: ['backend/**']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cp backend/Code.gs /tmp/code.js && node --check /tmp/code.js
+      - run: node -e "JSON.parse(require('fs').readFileSync('backend/appsscript.json','utf8'))"
