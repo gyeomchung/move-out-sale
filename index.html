@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Move-Out Sale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f1ea; --paper:#fbfaf6; --ink:#1c1b19; --muted:#6f6b62; --line:#d9d3c6;
+    --accent:#2f5d50; --accent-soft:#e3ece7; --sale:#b0472b;
+    --plants:#dfe8d6; --furniture:#ece2d3; --electronics:#dde3ea; --kitchenware:#efe3dc; --miscellaneous:#e6e1ec; --books:#efe9cf;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
+  body{background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  header{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1{font-family:"Instrument Serif",serif;font-weight:400;font-size:clamp(48px,8vw,96px);line-height:.95;letter-spacing:-.01em;margin:14px 0 18px}
+  h1 em{color:var(--accent)}
+  .lede{max-width:560px;color:var(--muted);font-size:16px}
+  .stats{display:flex;gap:36px;flex-wrap:wrap;margin-top:28px}
+  .stat b{display:block;font-family:"Instrument Serif",serif;font-weight:400;font-size:34px;line-height:1}
+  .stat span{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+  .banner{margin-top:24px;padding:10px 14px;border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent);font-size:13px;border-radius:6px;display:none}
+
+  .toolbar{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .toolbar .wrap{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding-top:14px;padding-bottom:14px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+  .chip{border:1px solid var(--line);background:var(--paper);padding:6px 12px;border-radius:999px;font:500 13px Inter,sans-serif;cursor:pointer;color:var(--ink)}
+  .chip[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .chip small{opacity:.55;margin-left:4px}
+  input[type=search],select{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:7px 14px;font:13px Inter,sans-serif;color:var(--ink)}
+  input[type=search]{width:190px}
+
+  main{padding:28px 0 120px}
+  .group-title{font-family:"Instrument Serif",serif;font-size:30px;font-weight:400;margin:28px 0 14px;display:flex;align-items:baseline;gap:10px}
+  .group-title small{font-family:Inter;font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s}
+  .card:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(0,0,0,.25)}
+  .thumb{aspect-ratio:3/2;position:relative;display:flex;align-items:flex-end;padding:14px;overflow:hidden}
+  .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .thumb .mono{font-family:"Instrument Serif",serif;font-size:64px;line-height:.8;opacity:.35;position:absolute;right:12px;top:10px}
+  .thumb .cat{position:relative;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);opacity:.7}
+  .tag{position:absolute;left:12px;top:12px;font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;background:var(--sale);color:#fff;padding:4px 8px;border-radius:4px}
+  .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .name{font-weight:500;font-size:15px;line-height:1.35}
+  .meta{display:flex;gap:6px;flex-wrap:wrap}
+  .pill{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  .pill.cond-like-new{border-color:var(--accent);color:var(--accent)}
+  .price-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-top:auto;padding-top:6px}
+  .price{font-family:"Instrument Serif",serif;font-size:30px;line-height:1}
+  .was{color:var(--muted);text-decoration:line-through;font-size:13px;white-space:nowrap}
+  .off{color:var(--sale);font-weight:600;font-size:12px}
+  .actions{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+  .links a{font-size:12px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line);margin-right:8px}
+  .links a:hover{color:var(--ink)}
+  .add{border:1px solid var(--ink);background:transparent;border-radius:999px;padding:6px 12px;font:500 12px Inter;cursor:pointer;color:var(--ink);white-space:nowrap}
+  .add.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .card.sold{opacity:.5}
+  .card.sold .add{display:none}
+  .card.sold .tag{background:var(--ink)}
+  .empty{padding:80px 0;text-align:center;color:var(--muted)}
+
+  .info{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;border-top:1px solid var(--line);padding-top:32px;margin-top:56px}
+  .info h3{font-family:"Instrument Serif",serif;font-weight:400;font-size:24px;margin-bottom:6px}
+  .info p{color:var(--muted);font-size:14px}
+
+  .bag{position:fixed;right:20px;bottom:20px;z-index:10;background:var(--ink);color:var(--paper);border:0;border-radius:999px;padding:12px 20px;font:500 14px Inter;cursor:pointer;box-shadow:0 10px 30px -10px rgba(0,0,0,.5);display:none}
+  .drawer{position:fixed;inset:0;z-index:20;display:none}
+  .drawer.open{display:block}
+  .drawer .scrim{position:absolute;inset:0;background:rgba(0,0,0,.35)}
+  .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:min(420px,100%);background:var(--paper);padding:28px;display:flex;flex-direction:column;gap:14px;overflow:auto}
+  .drawer h2{font-family:"Instrument Serif",serif;font-weight:400;font-size:34px}
+  .line{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:8px 0;font-size:14px}
+  .line button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;margin-left:8px}
+  .total{display:flex;justify-content:space-between;font-weight:600}
+  textarea{width:100%;min-height:140px;border:1px solid var(--line);border-radius:8px;padding:10px;font:13px/1.5 Inter;background:var(--bg);color:var(--ink);resize:vertical}
+  .primary{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:12px;font:600 14px Inter;cursor:pointer}
+  .ghost{background:none;border:1px solid var(--line);border-radius:999px;padding:10px;font:500 13px Inter;cursor:pointer;color:var(--ink)}
+  .slots{display:flex;flex-wrap:wrap;gap:6px}
+  .slot{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;font:500 12px Inter;cursor:pointer;color:var(--ink);min-width:62px;text-align:center}
+  .slot small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+  .slot[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+  .slot[aria-pressed=true] small{color:#dfe9e4}
+  .slot:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+  .primary:disabled{opacity:.4;cursor:not-allowed}
+  .hint{font-size:12px;color:var(--muted)}
+  .err{font-size:13px;color:var(--sale);min-height:1em}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+  .modal{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:16px}
+  .modal.open{display:flex}
+  .modal .scrim{position:absolute;inset:0;background:rgba(0,0,0,.4)}
+  .modal .box{position:relative;background:var(--paper);border-radius:14px;padding:26px;width:min(420px,100%);max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
+  .modal .box.wide{width:min(560px,100%)}
+  .modal h2{font-family:"Instrument Serif",serif;font-weight:400;font-size:32px;line-height:1.05}
+  .modal label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500}
+  .modal input,.modal textarea{border:1px solid var(--line);border-radius:8px;padding:10px;font:14px Inter;background:var(--bg);color:var(--ink);width:100%}
+  .q{border-top:1px solid var(--line);padding:12px 0}
+  .q .who{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
+  .q .txt{font-size:14px;margin-top:2px;white-space:pre-wrap}
+  .q .ans{margin:10px 0 0 14px;padding-left:12px;border-left:2px solid var(--accent)}
+  .owner-tag{background:var(--accent);color:#fff;font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:4px}
+  .owner-badge{margin-left:8px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;letter-spacing:.08em}
+  .q .tools{display:flex;gap:10px;margin-top:6px}
+  .q .tools button{border:0;background:none;color:var(--accent);font:500 12px Inter;cursor:pointer;padding:0}
+  .q .tools button.hide{color:var(--muted)}
+  .reply-form{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .ask{border:0;background:none;font:500 12px Inter;color:var(--muted);cursor:pointer;padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+  .card-btns{display:flex;gap:10px;align-items:center}
+  footer{color:var(--muted);font-size:12px;padding:24px 0 40px}
+  @media (max-width:640px){
+    .card-btns{justify-content:space-between}
+    header{padding-top:36px}.stats{gap:22px}
+    .toolbar .wrap{gap:8px;padding-top:10px;padding-bottom:10px}
+    .chips{flex:0 0 calc(100% + 48px);flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -24px;padding:0 24px}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{flex:none}
+    input[type=search]{flex:1;width:auto;min-width:0}
+    .grid{grid-template-columns:1fr 1fr;gap:10px}
+    .thumb{aspect-ratio:1/1;padding:10px}.thumb .mono{font-size:44px}
+    .body{padding:10px 12px 12px}.name{font-size:14px}.price{font-size:24px}
+    .actions{flex-direction:column;align-items:stretch}.add{width:100%}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Downtown Brooklyn · 1 min from Hoyt–Schermerhorn station · Pickup only <span id="ownerBadge" class="owner-badge" hidden>Owner mode</span></div>
+    <h1>Move-Out <em>Sale</em></h1>
+    <p class="lede">Plants, furniture, kitchenware and everyday things from our apartment — well cared for and priced to go. Add what you like to your list, ask questions on any item, and book a pickup time — all right here.</p>
+    <div class="stats" id="stats"></div>
+    <div class="banner" id="banner"></div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="wrap">
+    <div class="chips" id="chips"></div>
+    <input type="search" id="q" placeholder="Search items" aria-label="Search items">
+    <select id="sort" aria-label="Sort">
+      <option value="cat">By category</option>
+      <option value="low">Price: low to high</option>
+      <option value="high">Price: high to low</option>
+      <option value="off">Biggest discount</option>
+    </select>
+  </div>
+</div>
+
+<main class="wrap">
+  <div id="list"></div>
+  <section class="info">
+    <div><h3>Pickup</h3><p>Downtown Brooklyn, 1 min from Hoyt–Schermerhorn station. Weekdays 6:30–10pm, weekends 9am–10pm. Exact address shared when we confirm.</p></div>
+    <div><h3>Questions</h3><p>Tap “Ask” on any item. Questions are anonymous and answered here by the owner, so everyone can see the answer.</p></div>
+    <div><h3>How to reserve</h3><p>Add items to your list, pick a pickup time (Nov 9 – Dec 3), and leave your contact. We'll message you to confirm. Your contact is only seen by us.</p></div>
+  </section>
+  <footer id="updated"></footer>
+</main>
+
+<button class="bag" id="bagBtn"></button>
+<div class="drawer" id="drawer" role="dialog" aria-label="Your list">
+  <div class="scrim" data-close></div>
+  <div class="panel">
+    <h2>Your list</h2>
+    <div id="lines"></div>
+    <div class="total"><span>Total</span><span id="total"></span></div>
+    <div id="booking">
+      <p class="eyebrow" style="margin-top:14px">Pick a pickup day</p>
+      <div class="slots" id="days"></div>
+      <p class="eyebrow" style="margin-top:14px" id="timesLabel" hidden>Pick a time</p>
+      <div class="slots" id="times"></div>
+      <button class="primary" id="nextBtn" disabled style="width:100%;margin-top:16px">Reserve pickup</button>
+      <p class="hint" id="apiHint"></p>
+    </div>
+    <button class="ghost" data-close>Keep browsing</button>
+  </div>
+</div>
+
+<div class="modal" id="contactModal" role="dialog" aria-label="Your contact">
+  <div class="scrim" data-mclose></div>
+  <form class="box" id="contactForm">
+    <h2>Almost done</h2>
+    <p class="hint" id="slotSummary"></p>
+    <label>Your name<input name="name" required maxlength="80" autocomplete="name"></label>
+    <label>Phone or email<input name="contact" required maxlength="120" autocomplete="tel"></label>
+    <label>Note (optional)<textarea name="note" maxlength="500" rows="3" placeholder="Anything we should know?"></textarea></label>
+    <input name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <p class="hint">Only the owner sees your contact. We'll message you to confirm.</p>
+    <p class="err" id="contactErr"></p>
+    <button class="primary" type="submit">Confirm reservation</button>
+    <button class="ghost" type="button" data-mclose>Back</button>
+  </form>
+  <div class="box" id="doneBox" hidden>
+    <h2>You're booked ✓</h2>
+    <p id="doneText"></p>
+    <button class="primary" type="button" data-mclose>Done</button>
+  </div>
+</div>
+
+<div class="modal" id="itemModal" role="dialog" aria-label="Questions">
+  <div class="scrim" data-mclose></div>
+  <div class="box wide">
+    <p class="eyebrow" id="qCat"></p>
+    <h2 id="qTitle"></h2>
+    <div id="thread"></div>
+    <form id="askForm">
+      <textarea name="text" required maxlength="600" rows="3" placeholder="Ask a question about this item — you'll appear as an anonymous guest"></textarea>
+      <input name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <p class="err" id="askErr"></p>
+      <button class="primary" type="submit">Post question</button>
+    </form>
+    <button class="ghost" type="button" data-mclose>Close</button>
+  </div>
+</div>
+
+<div class="modal" id="ownerModal" role="dialog" aria-label="Owner sign in">
+  <div class="scrim" data-mclose></div>
+  <form class="box" id="ownerForm">
+    <h2>Owner sign in</h2>
+    <label>Owner key<input name="key" required autocomplete="off"></label>
+    <p class="err" id="ownerErr"></p>
+    <button class="primary" type="submit">Sign in</button>
+    <button class="ghost" type="button" data-mclose>Cancel</button>
+  </form>
+</div>
+
+<script id="data" type="application/json">{"updated": "Nov 8, 2026", "items": [{"id": 0, "category": "Plants", "sub": "Monstera", "name": "Monstera Deliciosa Large + Pot 10\"", "price": 100, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 1, "category": "Plants", "sub": "Monstera", "name": "Monstera BMX + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 2, "category": "Plants", "sub": "Monstera", "name": "Monstera Adansoni 3.5\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 3, "category": "Plants", "sub": "Monstera", "name": "Monstera Obliqua 4\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 4, "category": "Plants", "sub": "Monstera", "name": "Monstera Lemon Lime + Pot 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 5, "category": "Plants", "sub": "Monstera", "name": "Monstera Aurea 4\"", "price": 40, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 6, "category": "Plants", "sub": "Monstera", "name": "Monstera Adansoni 4\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 7, "category": "Plants", "sub": "Monstera", "name": "Monstera BMX + Pot 6.5\"", "price": 25, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 8, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur + Pot 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 9, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur + Pot 4\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 10, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur 4\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 11, "category": "Plants", "sub": "Monstera", "name": "Monstera Electroryte 3\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 12, "category": "Plants", "sub": "Monstera", "name": "Monstera Yellow Marylin 3\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 13, "category": "Plants", "sub": "Monstera", "name": "Monstera Electroryte 3\" (Smaller)", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 14, "category": "Plants", "sub": "Monstera", "name": "Monstera PomPom", "price": 100, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 15, "category": "Plants", "sub": "Monstera", "name": "Monstera Cathy Mint", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 16, "category": "Plants", "sub": "Monstera", "name": "Monstera Legacy", "price": 50, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 17, "category": "Plants", "sub": "Monstera", "name": "Monstera Aurea + Pot 9\"", "price": 200, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 18, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Dark Phoenix", "price": 70, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 19, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Friedrichsthalii + Pot 6\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 20, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Red Velvet Cake + Pot 6\"", "price": 60, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 21, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Besseae Aff + Pot 7\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 22, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Crystallinum + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 23, "category": "Plants", "sub": "Anthurium", "name": "Anthurium King (Veitchii) 6\"", "price": 70, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 24, "category": "Plants", "sub": "Fern", "name": "Blue Star Fern + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 25, "category": "Plants", "sub": "Fern", "name": "Blue Star Fern + Pot 6\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 26, "category": "Plants", "sub": "Fern", "name": "Staghorn Fern", "price": 60, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 27, "category": "Plants", "sub": "Others", "name": "Philodendron Tortum 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 28, "category": "Plants", "sub": "Others", "name": "Peperomia 4\"", "price": 5, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 29, "category": "Plants", "sub": "Others", "name": "Alocasia Frydek 2.5\"", "price": 5, "qty": 2, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 30, "category": "Miscellaneous", "sub": "", "name": "Outdoor Tent Bundle", "price": 50, "qty": 1, "drop": null, "condition": "Good", "original": 194.85, "links": ["https://www.amazon.com/dp/B07FTF7SQG", "https://www.amazon.com/dp/B01N7507OT", "https://www.amazon.com/dp/B0CW388R7Y", "https://www.amazon.com/dp/B0D7MZNWNS"], "status": "On Hold", "photo": ""}, {"id": 31, "category": "Miscellaneous", "sub": "", "name": "De-Architects Steel Vase", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 32, "category": "Miscellaneous", "sub": "", "name": "Pottery Wheel + Tool Kit", "price": 60, "qty": 1, "drop": null, "condition": "Good", "original": 156.68, "links": ["https://www.amazon.com/dp/B0B8Y8GZ48"], "status": "On Hold", "photo": ""}, {"id": 33, "category": "Miscellaneous", "sub": "", "name": "Ikea LILJETRÄD Mirror", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 24.99, "links": ["https://www.ikea.com/us/en/p/liljetraed-mirror-black-00551049/"], "status": "On Hold", "photo": ""}, {"id": 34, "category": "Miscellaneous", "sub": "", "name": "Christmas Tree + Decoration Bundle", "price": 30, "qty": 1, "drop": null, "condition": "Like New", "original": 101.93, "links": ["https://www.amazon.com/dp/B018FDYGVM", "https://www.amazon.com/dp/B07H7D8YH3", "https://www.amazon.com/dp/B08F7FCHQK"], "status": "On Hold", "photo": ""}, {"id": 35, "category": "Miscellaneous", "sub": "", "name": "Whole Foods Cart", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 30.0, "links": [], "status": "On Hold", "photo": ""}, {"id": 36, "category": "Miscellaneous", "sub": "", "name": "Ikea GRUBBAN Step", "price": 5, "qty": 1, "drop": null, "condition": "Good", "original": 23.0, "links": [], "status": "On Hold", "photo": ""}, {"id": 37, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Burgundy", "price": 17, "qty": 1, "drop": null, "condition": "Like New", "original": 56.98, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "On Hold", "photo": ""}, {"id": 38, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Bordeaux", "price": 16, "qty": 1, "drop": null, "condition": "Like New", "original": 53.63, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "On Hold", "photo": ""}, {"id": 39, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Universal", "price": 15, "qty": 2, "drop": null, "condition": "Like New", "original": 52.52, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "On Hold", "photo": ""}, {"id": 40, "category": "Kitchenware", "sub": "", "name": "Ninja Power Blender Duo Pro", "price": 40, "qty": 1, "drop": null, "condition": "Good", "original": 139.97, "links": ["https://www.amazon.com/dp/B0CCPRK5G1"], "status": "On Hold", "photo": ""}, {"id": 41, "category": "Kitchenware", "sub": "", "name": "Bella Slim Toaster", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 31.97, "links": ["https://www.amazon.com/dp/B0CYJBB2JQ"], "status": "On Hold", "photo": ""}, {"id": 42, "category": "Kitchenware", "sub": "", "name": "Cosori Electric Kettle", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 39.99, "links": ["https://www.amazon.com/dp/B0BZDFXLYX"], "status": "On Hold", "photo": ""}, {"id": 43, "category": "Kitchenware", "sub": "", "name": "Electric Egg Cooker", "price": 5, "qty": 1, "drop": null, "condition": "Good", "original": 11.99, "links": ["https://www.amazon.com/dp/B0C5HRJHGL"], "status": "On Hold", "photo": ""}, {"id": 44, "category": "Kitchenware", "sub": "", "name": "Ikea 18-Piece Dinnerware Set (Matte Green)", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 44.99, "links": ["https://www.ikea.com/us/en/p/faergklar-18-piece-dinnerware-set-matte-green-60564708/"], "status": "On Hold", "photo": ""}, {"id": 45, "category": "Kitchenware", "sub": "", "name": "Muji Coffee Dripper Set", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": ["https://www.muji.us/products/stainless-steel-coffee-dripper-22ss"], "status": "On Hold", "photo": ""}, {"id": 46, "category": "Kitchenware", "sub": "", "name": "Ikea BLANDA MATT Bamboo Serving Bowl", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 24.99, "links": ["https://www.ikea.com/us/en/p/blanda-matt-serving-bowl-bamboo-60214343/"], "status": "On Hold", "photo": ""}, {"id": 47, "category": "Kitchenware", "sub": "", "name": "Wine Decanter", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 48, "category": "Furniture", "sub": "", "name": "Ikea Trotten Desk, White, 63x31 1/2\"", "price": 50, "qty": 2, "drop": null, "condition": "Good", "original": 199.99, "links": ["https://www.ikea.com/us/en/p/trotten-desk-white-s79621921/"], "status": "On Hold", "photo": ""}, {"id": 49, "category": "Furniture", "sub": "", "name": "Ikea Wood Desk", "price": 20, "qty": 1, "drop": null, "condition": "Fair", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 50, "category": "Furniture", "sub": "", "name": "Ikea HYLLIS Shelf Unit", "price": 5, "qty": 3, "drop": null, "condition": "Fair", "original": 22.99, "links": ["https://www.ikea.com/us/en/p/hyllis-shelf-unit-indoor-outdoor-30428326/"], "status": "On Hold", "photo": ""}, {"id": 51, "category": "Furniture", "sub": "", "name": "Ikea LENNART Drawer", "price": 8, "qty": 1, "drop": null, "condition": "Like New", "original": 19.99, "links": ["https://www.ikea.com/us/en/p/lennart-drawer-unit-white-30326177/"], "status": "On Hold", "photo": ""}, {"id": 52, "category": "Furniture", "sub": "", "name": "Round Dining Table 40\" (Target)", "price": 50, "qty": 1, "drop": null, "condition": "Fair", "original": 343.0, "links": ["https://www.target.com/p/-/A-1013329001"], "status": "On Hold", "photo": ""}, {"id": 53, "category": "Furniture", "sub": "", "name": "Custom Shelf W 91\" D 7.5\" x H 25\" made by us", "price": 30, "qty": 1, "drop": null, "condition": "Good", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 54, "category": "Furniture", "sub": "", "name": "Trash Bin (used only 4 months!)", "price": 20, "qty": 1, "drop": null, "condition": "Like New", "original": 79.98, "links": ["https://www.amazon.com/dp/B0H2VMRRHH"], "status": "On Hold", "photo": ""}, {"id": 55, "category": "Furniture", "sub": "", "name": "4 Tier Rolling Cart", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 29.99, "links": ["https://www.amazon.com/dp/B0CSYXLMHC"], "status": "On Hold", "photo": ""}, {"id": 56, "category": "Electronics", "sub": "", "name": "Insignia TV 55\" LED 4K UHD + Stand", "price": 100, "qty": 1, "drop": null, "condition": "Like New", "original": 272.48, "links": [], "status": "On Hold", "photo": ""}, {"id": 57, "category": "Electronics", "sub": "", "name": "Air Circulator", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 59.99, "links": ["https://www.amazon.com/dp/B0DK5VZMNT"], "status": "On Hold", "photo": ""}, {"id": 58, "category": "Electronics", "sub": "", "name": "Dell Dual Monitor", "price": 70, "qty": 1, "drop": null, "condition": "Fair", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 59, "category": "Electronics", "sub": "", "name": "Dell U2414H Monitor", "price": 40, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 60, "category": "Electronics", "sub": "", "name": "Full Body Analysis Scale", "price": 50, "qty": 1, "drop": null, "condition": "Good", "original": 199.99, "links": ["https://fsastore.com/full-body-analysis-scale-caring-mill-by-aura/40381.html"], "status": "On Hold", "photo": ""}, {"id": 61, "category": "Books", "sub": "", "name": "Book Stand", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 39.97, "links": ["https://www.amazon.com/dp/B0BLKFWDKP"], "status": "On Hold", "photo": ""}, {"id": 62, "category": "Miscellaneous", "sub": "", "name": "Ikea HÄSTVISKARE Entrance Organizer 42x15x11 cm", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "On Hold", "photo": ""}]}</script>
+<script>
+const CONFIG = {
+  apiUrl: "https://script.google.com/macros/s/AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt/exec",   // Apps Script web app /exec URL (comments, reservations, live items)
+  csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnPWGRf5-ZinHgZgKU3GJjm9m0k27HBGnBHgyOGz1F2deHZ30OMP1NMjnH_GJlM7mokOH3KjStApsv/pub?gid=1708984561&single=true&output=csv",
+  firstDay: "2026-11-09", lastDay: "2026-12-03",
+  catOrder: ["Furniture","Electronics","Kitchenware","Plants","Miscellaneous","Books"]
+};
+const embedded = JSON.parse(document.getElementById('data').textContent);
+let items = embedded.items, updatedAt = embedded.updated, comments = [], booked = new Set(), source = 'embedded';
+
+const $ = id => document.getElementById(id);
+const money = v => { const n = parseFloat(String(v).replace(/[$,\s]/g,'')); return isFinite(n) ? n : null; };
+const fmt = n => '$' + (Number.isInteger(n) ? n : n.toFixed(2));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const key = it => it.name + '|' + it.price;
+const now = it => (it.drop!=null && it.drop>0 && it.drop<it.price) ? it.drop : it.price;
+const isSold = it => /sold/i.test(it.status);
+function photoUrl(u){ if(!u) return ''; const m=u.match(/(?:\/d\/|id=)([\w-]{20,})/); return /drive\.google\.com/.test(u)&&m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000` : u; }
+
+function parseCSV(t){
+  const rows=[];let r=[],f='',q=false;
+  for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){ if(c=='"'){ if(t[i+1]=='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c=='"') q=true; else if(c==','){r.push(f);f='';}
+    else if(c=='\n'){r.push(f);rows.push(r);r=[];f='';} else if(c!='\r') f+=c; }
+  r.push(f);rows.push(r);return rows;
+}
+function fromCSV(text){
+  const rows=parseCSV(text), h=rows[0].map(s=>s.trim()), col=n=>h.indexOf(n);
+  return rows.slice(1).map(r=>({
+    category:r[col('Category')]||'', sub:r[col('Subcategory')]||'', name:(r[col('Item')]||'').trim(),
+    price:money(r[col('Price')]), qty:parseInt(r[col('QTY')])||1, drop:money(r[col('Price Drop')]),
+    condition:r[col('Condition')]||'', original:money(r[col('Original Price + Tax')]),
+    links:(r[col('Original Item Link')]||'').split(/\s+/).map(s=>s.replace(/^-/,'')).filter(s=>/^https?:/.test(s)),
+    status:(r[col('Status')]||'').trim(), photo:col('Photo')>=0 ? (r[col('Photo')]||'').trim() : ''
+  })).filter(x=>x.name && x.price!=null);
+}
+
+/* ---------- state ---------- */
+const state = {cat:'All', q:'', sort:'cat', bag:new Set(), day:null, time:null, openItem:null};
+let ownerKey = '';
+try{ JSON.parse(localStorage.getItem('mos-bag')||'[]').forEach(k=>state.bag.add(k)); ownerKey = localStorage.getItem('mos-owner')||''; }catch(e){}
+
+/* ---------- api ---------- */
+async function api(body){
+  const r = await fetch(CONFIG.apiUrl, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)});
+  return r.json();
+}
+async function load(){
+  if(CONFIG.apiUrl){
+    try{ const d = await (await fetch(CONFIG.apiUrl)).json();
+      if(d.items && d.items.length){ items=d.items; source='live'; }
+      comments=d.comments||[]; booked=new Set(d.booked||[]); refresh(); return; }catch(e){}
+  }
+  try{ const t = await (await fetch(CONFIG.csvUrl)).text(); const live=fromCSV(t); if(live.length){ items=live; source='live'; refresh(); } }catch(e){}
+}
+
+/* ---------- listing ---------- */
+function visible(){
+  const posted = items.filter(i=>/posted|sold/i.test(i.status));
+  const preview = location.hash==='#preview' || ownerKey || posted.length===0;
+  const b=$('banner');
+  if(preview && (posted.length===0 || location.hash==='#preview' || ownerKey)){
+    b.style.display='block';
+    b.textContent = posted.length===0
+      ? 'Preview — no items are marked “Posted” in the sheet yet, so every item is shown. Buyers will only see Posted and Sold items.'
+      : 'Preview — showing On Hold items too (only you see this).';
+  } else b.style.display='none';
+  return preview ? items : posted;
+}
+function qCount(i){ return comments.filter(c=>c.item===i.name && !c.parent && !c.owner).length; }
+
+function render(){
+  const all = visible();
+  const cats = CONFIG.catOrder.filter(c=>all.some(i=>i.category===c)).concat([...new Set(all.map(i=>i.category))].filter(c=>c && !CONFIG.catOrder.includes(c)));
+  const avail = all.filter(i=>!isSold(i));
+  const offs = avail.filter(i=>i.original).map(i=>1-now(i)/i.original);
+  $('stats').innerHTML =
+    `<div class="stat"><b>${avail.length}</b><span>Items available</span></div>`+
+    `<div class="stat"><b>${avail.length?fmt(Math.min(...avail.map(now))):'–'}</b><span>Starting at</span></div>`+
+    (offs.length?`<div class="stat"><b>${Math.round(offs.reduce((a,b)=>a+b,0)/offs.length*100)}%</b><span>Avg. off retail</span></div>`:'');
+  $('chips').innerHTML = ['All',...cats].map(c=>{
+    const n = c==='All'?all.length:all.filter(i=>i.category===c).length;
+    return `<button class="chip" aria-pressed="${state.cat===c}" data-cat="${esc(c)}">${esc(c)}<small>${n}</small></button>`;}).join('');
+  let list = all.filter(i=>(state.cat==='All'||i.category===state.cat) &&
+    (!state.q || (i.name+' '+i.category+' '+i.sub).toLowerCase().includes(state.q)));
+  const soldLast=(a,b)=>isSold(a)-isSold(b);
+  const out=$('list');
+  if(!list.length){ out.innerHTML='<div class="empty">Nothing matches that yet.</div>'; return; }
+  if(state.sort==='cat'){
+    out.innerHTML = cats.filter(c=>list.some(i=>i.category===c)).map(c=>{
+      const g=list.filter(i=>i.category===c).sort(soldLast);
+      return `<h2 class="group-title">${esc(c)}<small>${g.length} items</small></h2><div class="grid">${g.map(card).join('')}</div>`;}).join('');
+  } else {
+    const f={low:(a,b)=>now(a)-now(b),high:(a,b)=>now(b)-now(a),off:(a,b)=>((b.original?1-now(b)/b.original:0)-(a.original?1-now(a)/a.original:0))}[state.sort];
+    out.innerHTML = `<div class="grid">${list.sort((a,b)=>soldLast(a,b)||f(a,b)).map(card).join('')}</div>`;
+  }
+}
+
+function card(i){
+  const sold=isSold(i), p=now(i), k=key(i), dropped = p<i.price;
+  const off = i.original ? Math.round((1-p/i.original)*100) : null;
+  const bg = `var(--${(i.category||'misc').toLowerCase()}, #e8e4dc)`;
+  const label = sold?'Sold':(dropped?'Price drop':'');
+  const links = i.links.map((u,n)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${i.links.length>1?'Item '+(n+1):'Original listing'} ↗</a>`).join('');
+  return `<article class="card${sold?' sold':''}">
+    <div class="thumb" style="background:${bg}">
+      ${i.photo?`<img src="${esc(photoUrl(i.photo))}" alt="${esc(i.name)}" loading="lazy" referrerpolicy="no-referrer">`:`<div class="mono">${esc(i.name.replace(/^ikea\s+/i,'')[0]||'')}</div>`}
+      ${label?`<span class="tag">${label}</span>`:''}
+      ${i.photo?'':`<span class="cat">${esc(i.sub||i.category)}</span>`}
+    </div>
+    <div class="body">
+      <div class="name">${esc(i.name)}</div>
+      <div class="meta">
+        ${i.condition?`<span class="pill cond-${i.condition.toLowerCase().replace(/\s+/g,'-')}">${esc(i.condition)}</span>`:''}
+        ${i.qty>1?`<span class="pill">${i.qty} available · price each</span>`:''}
+      </div>
+      <div class="price-row">
+        <span class="price">${fmt(p)}</span>
+        ${dropped?`<span class="was">${fmt(i.price)}</span>`:''}
+        ${i.original?`<span class="was">${fmt(i.original)} new</span>`:''}
+        ${off>0?`<span class="off">−${off}%</span>`:''}
+      </div>
+      <div class="actions">
+        <div class="links">${links}</div>
+        <div class="card-btns">
+          <button class="ask" data-ask="${esc(k)}">Ask${qCount(i)?' ('+qCount(i)+')':''}</button>
+          <button class="add${state.bag.has(k)?' on':''}" data-key="${esc(k)}">${state.bag.has(k)?'✓ Added':'+ Add'}</button>
+        </div>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ---------- list + booking ---------- */
+function etNow(){ const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()); const g=t=>p.find(x=>x.type===t).value; return {date:`${g('year')}-${g('month')}-${g('day')}`, mins:(+g('hour')%24)*60+(+g('minute'))}; }
+function days(){ const out=[]; const d=new Date(CONFIG.firstDay+'T12:00:00'), end=new Date(CONFIG.lastDay+'T12:00:00'), t=etNow();
+  for(;d<=end;d.setDate(d.getDate()+1)){ const iso=d.toISOString().slice(0,10); if(iso>=t.date) out.push({iso, dow:d.getDay(), label:d.toLocaleDateString('en-US',{weekday:'short'}), num:d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}); }
+  return out; }
+function times(day){ const we=day.dow===0||day.dow===6, out=[], t=etNow();
+  for(let m=(we?9*60:18*60+30); m<=21*60+30; m+=30){ const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
+    const h12=((Math.floor(m/60)+11)%12)+1, label=`${h12}:${mm}${m<12*60?'am':'pm'}`;
+    const past = day.iso===t.date && m<=t.mins+60;
+    out.push({v:`${hh}:${mm}`, label, off: past || booked.has(`${day.iso} ${hh}:${mm}`)}); }
+  return out; }
+function selected(){ return items.filter(i=>state.bag.has(key(i)) && !isSold(i)); }
+
+function renderBag(){
+  const sel = selected(), total = sel.reduce((a,i)=>a+now(i),0);
+  const btn=$('bagBtn'); btn.style.display = sel.length?'block':'none';
+  btn.textContent = `Your list · ${sel.length} · ${fmt(total)}`;
+  $('lines').innerHTML = sel.length ? sel.map(i=>`<div class="line"><span>${esc(i.name)}</span><span>${fmt(now(i))}<button data-key="${esc(key(i))}" data-remove>Remove</button></span></div>`).join('') : '<p class="hint">Your list is empty.</p>';
+  $('total').textContent = fmt(total);
+  const ds=days();
+  $('days').innerHTML = ds.map(d=>`<button class="slot" data-day="${d.iso}" aria-pressed="${state.day===d.iso}">${d.label}<small>${d.num}</small></button>`).join('') || '<p class="hint">Pickup window has ended.</p>';
+  const day = ds.find(d=>d.iso===state.day);
+  $('timesLabel').hidden = !day;
+  $('times').innerHTML = day ? times(day).map(t=>`<button class="slot" data-time="${t.v}" ${t.off?'disabled':''} aria-pressed="${state.time===t.v}">${t.label}</button>`).join('') : '';
+  if(day && state.time && times(day).find(t=>t.v===state.time)?.off) state.time=null;
+  $('nextBtn').disabled = !(sel.length && day && state.time && CONFIG.apiUrl);
+  $('apiHint').textContent = CONFIG.apiUrl ? '' : 'Online booking turns on once the site is live.';
+  try{ localStorage.setItem('mos-bag', JSON.stringify([...state.bag])); }catch(e){}
+}
+function slotText(){ const d=days().find(x=>x.iso===state.day), t=d&&times(d).find(x=>x.v===state.time); return d&&t?`${d.label}, ${d.num} at ${t.label}`:''; }
+
+/* ---------- Q&A ---------- */
+function renderThread(){
+  const it = items.find(i=>key(i)===state.openItem); if(!it) return;
+  $('qCat').textContent = it.category + (it.sub?' · '+it.sub:'');
+  $('qTitle').textContent = it.name;
+  const qs = comments.filter(c=>c.item===it.name && !c.parent);
+  const when = t => { try{ return new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }catch(e){ return ''; } };
+  const who = c => c.owner ? `<span class="owner-tag">Owner</span>` : esc(c.name);
+  $('thread').innerHTML = (qs.length ? qs.map(q=>{
+    const ans = comments.filter(c=>c.parent===q.id);
+    return `<div class="q"><div class="who">${who(q)}<span>${when(q.time)}</span></div><div class="txt">${esc(q.text)}</div>
+      ${ans.map(a=>`<div class="ans"><div class="who">${who(a)}<span>${when(a.time)}</span></div><div class="txt">${esc(a.text)}</div>
+        ${ownerKey?`<div class="tools"><button class="hide" data-hide="${esc(a.id)}">Hide</button></div>`:''}</div>`).join('')}
+      ${ownerKey?`<div class="tools"><button data-reply="${esc(q.id)}">Reply as owner</button><button class="hide" data-hide="${esc(q.id)}">Hide</button></div>
+        <form class="reply-form" data-parent="${esc(q.id)}" hidden><textarea required maxlength="1000" rows="2" placeholder="Your answer"></textarea><button class="primary" type="submit">Post reply</button></form>`:''}
+    </div>`; }).join('') : '<p class="hint">No questions yet — be the first to ask.</p>');
+  $('askForm').hidden = !CONFIG.apiUrl;
+  if(!CONFIG.apiUrl) $('thread').insertAdjacentHTML('beforeend','<p class="hint">Questions open once the site is live.</p>');
+}
+
+/* ---------- modals ---------- */
+const openM = id => $(id).classList.add('open');
+const closeM = () => document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));
+
+document.addEventListener('click', e=>{
+  const t=e.target;
+  const c=t.closest('.chip'); if(c){ state.cat=c.dataset.cat; render(); const m=document.querySelector('main'); if(window.scrollY>m.offsetTop) window.scrollTo({top:m.offsetTop-60}); return; }
+  const a=t.closest('.add'); if(a){ const k=a.dataset.key; state.bag.has(k)?state.bag.delete(k):state.bag.add(k); render(); renderBag(); return; }
+  const q=t.closest('[data-ask]'); if(q){ state.openItem=q.dataset.ask; renderThread(); openM('itemModal'); return; }
+  const r=t.closest('[data-remove]'); if(r){ state.bag.delete(r.dataset.key); render(); renderBag(); return; }
+  const d=t.closest('[data-day]'); if(d){ state.day=d.dataset.day; state.time=null; renderBag(); return; }
+  const tm=t.closest('[data-time]'); if(tm){ state.time=tm.dataset.time; renderBag(); return; }
+  const rp=t.closest('[data-reply]'); if(rp){ const f=document.querySelector(`.reply-form[data-parent="${rp.dataset.reply}"]`); f.hidden=!f.hidden; return; }
+  const hd=t.closest('[data-hide]'); if(hd){ api({action:'hide', id:hd.dataset.hide, key:ownerKey}).then(()=>{ comments=comments.filter(c=>c.id!==hd.dataset.hide); renderThread(); render(); }); return; }
+  if(t.closest('#bagBtn')) { renderBag(); $('drawer').classList.add('open'); }
+  if(t.closest('[data-close]')) $('drawer').classList.remove('open');
+  if(t.closest('[data-mclose]')) closeM();
+  if(t.closest('#nextBtn')){ $('slotSummary').textContent = `Pickup: ${slotText()} · ${selected().length} item(s), ${fmt(selected().reduce((a,i)=>a+now(i),0))}`; $('contactErr').textContent=''; $('contactForm').hidden=false; $('doneBox').hidden=true; openM('contactModal'); }
+});
+
+$('contactForm').addEventListener('submit', async e=>{
+  e.preventDefault(); const f=e.target, btn=f.querySelector('[type=submit]'); btn.disabled=true; $('contactErr').textContent='';
+  const sel=selected();
+  try{
+    const res = await api({action:'reserve', items:sel.map(i=>i.name), total:sel.reduce((a,i)=>a+now(i),0), date:state.day, time:state.time,
+      name:f.name.value, contact:f.contact.value, note:f.note.value, website:f.website.value});
+    if(res.ok){
+      $('doneText').textContent = `${slotText()}. We'll reach out to ${f.contact.value} to confirm. Reservation #${res.id}.`;
+      booked.add(`${state.day} ${state.time}`); state.bag.clear(); state.time=null; f.reset();
+      $('contactForm').hidden=true; $('doneBox').hidden=false; $('drawer').classList.remove('open'); render(); renderBag();
+    } else $('contactErr').textContent = res.error==='taken' ? 'Someone just took that time — please pick another.' : 'Something went wrong. Please try again.';
+    if(res.error==='taken'){ booked.add(`${state.day} ${state.time}`); state.time=null; renderBag(); }
+  }catch(err){ $('contactErr').textContent='Could not reach the server. Please try again.'; }
+  btn.disabled=false;
+});
+
+$('askForm').addEventListener('submit', async e=>{
+  e.preventDefault(); const f=e.target, it=items.find(i=>key(i)===state.openItem), btn=f.querySelector('[type=submit]'); btn.disabled=true; $('askErr').textContent='';
+  try{ const res=await api({action:'comment', item:it.name, text:f.text.value, website:f.website.value});
+    if(res.ok){ f.reset(); await load(); renderThread(); } else $('askErr').textContent='Could not post. Please try again.';
+  }catch(err){ $('askErr').textContent='Could not reach the server.'; }
+  btn.disabled=false;
+});
+$('thread').addEventListener('submit', async e=>{
+  if(!e.target.matches('.reply-form')) return; e.preventDefault();
+  const f=e.target, it=items.find(i=>key(i)===state.openItem);
+  const res=await api({action:'reply', item:it.name, parent:f.dataset.parent, text:f.querySelector('textarea').value, key:ownerKey});
+  if(res.ok){ await load(); renderThread(); }
+});
+
+$('ownerForm').addEventListener('submit', async e=>{
+  e.preventDefault(); const k=e.target.key.value.trim();
+  try{ const res=await api({action:'checkKey', key:k});
+    if(res.ok){ ownerKey=k; try{localStorage.setItem('mos-owner',k);}catch(_){} closeM(); applyOwner(); history.replaceState(null,'',location.pathname); }
+    else $('ownerErr').textContent='That key is not right.';
+  }catch(err){ $('ownerErr').textContent='Could not reach the server.'; }
+});
+function applyOwner(){ $('ownerBadge').hidden=!ownerKey; render(); }
+function onHash(){ if(location.hash==='#owner' && !ownerKey && CONFIG.apiUrl) openM('ownerModal'); if(location.hash==='#logout'){ ownerKey=''; try{localStorage.removeItem('mos-owner');}catch(_){} applyOwner(); } render(); }
+
+$('q').addEventListener('input', e=>{ state.q=e.target.value.trim().toLowerCase(); render(); });
+$('sort').addEventListener('change', e=>{ state.sort=e.target.value; render(); });
+window.addEventListener('hashchange', onHash);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeM(); $('drawer').classList.remove('open'); } });
+
+function refresh(){ render(); renderBag(); if($('itemModal').classList.contains('open')) renderThread();
+  $('updated').textContent = (source==='live'?'Live from the sale sheet':'Last updated '+updatedAt) + ' · Prices are per item.'; }
+applyOwner(); onHash(); refresh(); load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
