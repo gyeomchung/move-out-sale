@@ -113,6 +113,11 @@
   .reply-form{display:flex;flex-direction:column;gap:6px;margin-top:8px}
   .ask{border:0;background:none;font:500 12px Inter;color:var(--muted);cursor:pointer;padding:6px 0;text-decoration:underline;text-underline-offset:3px}
   .card-btns{display:flex;gap:10px;align-items:center}
+  .card.reserved .thumb{filter:saturate(.6)}
+  .card.reserved .tag{background:#b7791f}
+  .add.wait{border-color:#b7791f;color:#8a5a12}
+  .claim{background:#fff4d6;border:1px solid #e6c36a;color:#6b4a0c;border-radius:8px;padding:10px 12px;font-size:13px}
+  .line select{margin-left:6px;border:1px solid var(--line);border-radius:6px;padding:2px 4px;font:12px Inter;background:var(--bg)}
   footer{color:var(--muted);font-size:12px;padding:24px 0 40px}
   @media (max-width:640px){
     .card-btns{justify-content:space-between}
@@ -158,7 +163,7 @@
   <section class="info">
     <div><h3>Pickup</h3><p>Downtown Brooklyn, 1 min from Hoyt–Schermerhorn station. Weekdays 6:30–10pm, weekends 9am–10pm. Exact address shared when we confirm.</p></div>
     <div><h3>Questions</h3><p>Tap “Ask” on any item. Questions are anonymous and answered here by the owner, so everyone can see the answer.</p></div>
-    <div><h3>How to reserve</h3><p>Add items to your list, pick a pickup time (Nov 9 – Dec 3), and leave your contact. We'll message you to confirm. Your contact is only seen by us.</p></div>
+    <div><h3>How to reserve</h3><p>Add items to your list, pick a pickup time (Nov 9 – Dec 3), and leave your contact. We'll message you to confirm. Already reserved? Join the waitlist and we'll email you if it frees up.</p></div>
   </section>
   <footer id="updated"></footer>
 </main>
@@ -168,6 +173,7 @@
   <div class="scrim" data-close></div>
   <div class="panel">
     <h2>Your list</h2>
+    <p class="claim" id="claimNote" hidden></p>
     <div id="lines"></div>
     <div class="total"><span>Total</span><span id="total"></span></div>
     <div id="booking">
@@ -199,6 +205,8 @@
   <div class="box" id="doneBox" hidden>
     <h2>You're booked ✓</h2>
     <p id="doneText"></p>
+    <p class="hint">Save this link in case you need to cancel:</p>
+    <div style="display:flex;gap:6px"><input id="cancelLink" readonly style="flex:1;font-size:12px"><button class="ghost" type="button" id="copyCancel" style="padding:8px 12px">Copy</button></div>
     <button class="primary" type="button" data-mclose>Done</button>
   </div>
 </div>
@@ -219,6 +227,36 @@
   </div>
 </div>
 
+<div class="modal" id="waitModal" role="dialog" aria-label="Waitlist">
+  <div class="scrim" data-mclose></div>
+  <form class="box" id="waitForm">
+    <p class="eyebrow">Reserved — join the waitlist</p>
+    <h2 id="waitTitle"></h2>
+    <p class="hint" id="waitInfo"></p>
+    <label>Your email<input name="email" type="email" required maxlength="120" autocomplete="email"></label>
+    <input name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <p class="hint">If the reservation is cancelled, we'll email you a link and hold it for you for 24 hours.</p>
+    <p class="err" id="waitErr"></p>
+    <button class="primary" type="submit">Join waitlist</button>
+    <button class="ghost" type="button" data-mclose>Cancel</button>
+  </form>
+  <div class="box" id="waitDone" hidden>
+    <h2>You're on the list ✓</h2>
+    <p id="waitDoneText"></p>
+    <button class="primary" type="button" data-mclose>Done</button>
+  </div>
+</div>
+
+<div class="modal" id="cancelModal" role="dialog" aria-label="Reservation">
+  <div class="scrim" data-mclose></div>
+  <div class="box">
+    <h2 id="cancelTitle">Cancel reservation?</h2>
+    <p id="cancelText"></p>
+    <button class="primary" type="button" id="cancelYes" style="background:var(--sale)">Yes, cancel it</button>
+    <button class="ghost" type="button" data-mclose>Close</button>
+  </div>
+</div>
+
 <div class="modal" id="ownerModal" role="dialog" aria-label="Owner sign in">
   <div class="scrim" data-mclose></div>
   <form class="box" id="ownerForm">
@@ -230,7 +268,7 @@
   </form>
 </div>
 
-<script id="data" type="application/json">{"updated": "Nov 8, 2026", "items": [{"id": 0, "category": "Plants", "sub": "Monstera", "name": "Monstera Deliciosa Large + Pot 10\"", "price": 100, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 1, "category": "Plants", "sub": "Monstera", "name": "Monstera BMX + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 2, "category": "Plants", "sub": "Monstera", "name": "Monstera Adansoni 3.5\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 3, "category": "Plants", "sub": "Monstera", "name": "Monstera Obliqua 4\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 4, "category": "Plants", "sub": "Monstera", "name": "Monstera Lemon Lime + Pot 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 5, "category": "Plants", "sub": "Monstera", "name": "Monstera Aurea 4\"", "price": 40, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 6, "category": "Plants", "sub": "Monstera", "name": "Monstera Adansoni 4\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 7, "category": "Plants", "sub": "Monstera", "name": "Monstera BMX + Pot 6.5\"", "price": 25, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 8, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur + Pot 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 9, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur + Pot 4\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 10, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur 4\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 11, "category": "Plants", "sub": "Monstera", "name": "Monstera Electroryte 3\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 12, "category": "Plants", "sub": "Monstera", "name": "Monstera Yellow Marylin 3\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 13, "category": "Plants", "sub": "Monstera", "name": "Monstera Electroryte 3\" (Smaller)", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 14, "category": "Plants", "sub": "Monstera", "name": "Monstera PomPom", "price": 100, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 15, "category": "Plants", "sub": "Monstera", "name": "Monstera Cathy Mint", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 16, "category": "Plants", "sub": "Monstera", "name": "Monstera Legacy", "price": 50, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 17, "category": "Plants", "sub": "Monstera", "name": "Monstera Aurea + Pot 9\"", "price": 200, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 18, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Dark Phoenix", "price": 70, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 19, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Friedrichsthalii + Pot 6\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 20, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Red Velvet Cake + Pot 6\"", "price": 60, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 21, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Besseae Aff + Pot 7\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 22, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Crystallinum + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 23, "category": "Plants", "sub": "Anthurium", "name": "Anthurium King (Veitchii) 6\"", "price": 70, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 24, "category": "Plants", "sub": "Fern", "name": "Blue Star Fern + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 25, "category": "Plants", "sub": "Fern", "name": "Blue Star Fern + Pot 6\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 26, "category": "Plants", "sub": "Fern", "name": "Staghorn Fern", "price": 60, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 27, "category": "Plants", "sub": "Others", "name": "Philodendron Tortum 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 28, "category": "Plants", "sub": "Others", "name": "Peperomia 4\"", "price": 5, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 29, "category": "Plants", "sub": "Others", "name": "Alocasia Frydek 2.5\"", "price": 5, "qty": 2, "drop": null, "condition": "", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 30, "category": "Miscellaneous", "sub": "", "name": "Outdoor Tent Bundle", "price": 50, "qty": 1, "drop": null, "condition": "Good", "original": 194.85, "links": ["https://www.amazon.com/dp/B07FTF7SQG", "https://www.amazon.com/dp/B01N7507OT", "https://www.amazon.com/dp/B0CW388R7Y", "https://www.amazon.com/dp/B0D7MZNWNS"], "status": "On Hold", "photo": ""}, {"id": 31, "category": "Miscellaneous", "sub": "", "name": "De-Architects Steel Vase", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 32, "category": "Miscellaneous", "sub": "", "name": "Pottery Wheel + Tool Kit", "price": 60, "qty": 1, "drop": null, "condition": "Good", "original": 156.68, "links": ["https://www.amazon.com/dp/B0B8Y8GZ48"], "status": "On Hold", "photo": ""}, {"id": 33, "category": "Miscellaneous", "sub": "", "name": "Ikea LILJETRÄD Mirror", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 24.99, "links": ["https://www.ikea.com/us/en/p/liljetraed-mirror-black-00551049/"], "status": "On Hold", "photo": ""}, {"id": 34, "category": "Miscellaneous", "sub": "", "name": "Christmas Tree + Decoration Bundle", "price": 30, "qty": 1, "drop": null, "condition": "Like New", "original": 101.93, "links": ["https://www.amazon.com/dp/B018FDYGVM", "https://www.amazon.com/dp/B07H7D8YH3", "https://www.amazon.com/dp/B08F7FCHQK"], "status": "On Hold", "photo": ""}, {"id": 35, "category": "Miscellaneous", "sub": "", "name": "Whole Foods Cart", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 30.0, "links": [], "status": "On Hold", "photo": ""}, {"id": 36, "category": "Miscellaneous", "sub": "", "name": "Ikea GRUBBAN Step", "price": 5, "qty": 1, "drop": null, "condition": "Good", "original": 23.0, "links": [], "status": "On Hold", "photo": ""}, {"id": 37, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Burgundy", "price": 17, "qty": 1, "drop": null, "condition": "Like New", "original": 56.98, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "On Hold", "photo": ""}, {"id": 38, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Bordeaux", "price": 16, "qty": 1, "drop": null, "condition": "Like New", "original": 53.63, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "On Hold", "photo": ""}, {"id": 39, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Universal", "price": 15, "qty": 2, "drop": null, "condition": "Like New", "original": 52.52, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "On Hold", "photo": ""}, {"id": 40, "category": "Kitchenware", "sub": "", "name": "Ninja Power Blender Duo Pro", "price": 40, "qty": 1, "drop": null, "condition": "Good", "original": 139.97, "links": ["https://www.amazon.com/dp/B0CCPRK5G1"], "status": "On Hold", "photo": ""}, {"id": 41, "category": "Kitchenware", "sub": "", "name": "Bella Slim Toaster", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 31.97, "links": ["https://www.amazon.com/dp/B0CYJBB2JQ"], "status": "On Hold", "photo": ""}, {"id": 42, "category": "Kitchenware", "sub": "", "name": "Cosori Electric Kettle", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 39.99, "links": ["https://www.amazon.com/dp/B0BZDFXLYX"], "status": "On Hold", "photo": ""}, {"id": 43, "category": "Kitchenware", "sub": "", "name": "Electric Egg Cooker", "price": 5, "qty": 1, "drop": null, "condition": "Good", "original": 11.99, "links": ["https://www.amazon.com/dp/B0C5HRJHGL"], "status": "On Hold", "photo": ""}, {"id": 44, "category": "Kitchenware", "sub": "", "name": "Ikea 18-Piece Dinnerware Set (Matte Green)", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 44.99, "links": ["https://www.ikea.com/us/en/p/faergklar-18-piece-dinnerware-set-matte-green-60564708/"], "status": "On Hold", "photo": ""}, {"id": 45, "category": "Kitchenware", "sub": "", "name": "Muji Coffee Dripper Set", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": ["https://www.muji.us/products/stainless-steel-coffee-dripper-22ss"], "status": "On Hold", "photo": ""}, {"id": 46, "category": "Kitchenware", "sub": "", "name": "Ikea BLANDA MATT Bamboo Serving Bowl", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 24.99, "links": ["https://www.ikea.com/us/en/p/blanda-matt-serving-bowl-bamboo-60214343/"], "status": "On Hold", "photo": ""}, {"id": 47, "category": "Kitchenware", "sub": "", "name": "Wine Decanter", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 48, "category": "Furniture", "sub": "", "name": "Ikea Trotten Desk, White, 63x31 1/2\"", "price": 50, "qty": 2, "drop": null, "condition": "Good", "original": 199.99, "links": ["https://www.ikea.com/us/en/p/trotten-desk-white-s79621921/"], "status": "On Hold", "photo": ""}, {"id": 49, "category": "Furniture", "sub": "", "name": "Ikea Wood Desk", "price": 20, "qty": 1, "drop": null, "condition": "Fair", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 50, "category": "Furniture", "sub": "", "name": "Ikea HYLLIS Shelf Unit", "price": 5, "qty": 3, "drop": null, "condition": "Fair", "original": 22.99, "links": ["https://www.ikea.com/us/en/p/hyllis-shelf-unit-indoor-outdoor-30428326/"], "status": "On Hold", "photo": ""}, {"id": 51, "category": "Furniture", "sub": "", "name": "Ikea LENNART Drawer", "price": 8, "qty": 1, "drop": null, "condition": "Like New", "original": 19.99, "links": ["https://www.ikea.com/us/en/p/lennart-drawer-unit-white-30326177/"], "status": "On Hold", "photo": ""}, {"id": 52, "category": "Furniture", "sub": "", "name": "Round Dining Table 40\" (Target)", "price": 50, "qty": 1, "drop": null, "condition": "Fair", "original": 343.0, "links": ["https://www.target.com/p/-/A-1013329001"], "status": "On Hold", "photo": ""}, {"id": 53, "category": "Furniture", "sub": "", "name": "Custom Shelf W 91\" D 7.5\" x H 25\" made by us", "price": 30, "qty": 1, "drop": null, "condition": "Good", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 54, "category": "Furniture", "sub": "", "name": "Trash Bin (used only 4 months!)", "price": 20, "qty": 1, "drop": null, "condition": "Like New", "original": 79.98, "links": ["https://www.amazon.com/dp/B0H2VMRRHH"], "status": "On Hold", "photo": ""}, {"id": 55, "category": "Furniture", "sub": "", "name": "4 Tier Rolling Cart", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 29.99, "links": ["https://www.amazon.com/dp/B0CSYXLMHC"], "status": "On Hold", "photo": ""}, {"id": 56, "category": "Electronics", "sub": "", "name": "Insignia TV 55\" LED 4K UHD + Stand", "price": 100, "qty": 1, "drop": null, "condition": "Like New", "original": 272.48, "links": [], "status": "On Hold", "photo": ""}, {"id": 57, "category": "Electronics", "sub": "", "name": "Air Circulator", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 59.99, "links": ["https://www.amazon.com/dp/B0DK5VZMNT"], "status": "On Hold", "photo": ""}, {"id": 58, "category": "Electronics", "sub": "", "name": "Dell Dual Monitor", "price": 70, "qty": 1, "drop": null, "condition": "Fair", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 59, "category": "Electronics", "sub": "", "name": "Dell U2414H Monitor", "price": 40, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "On Hold", "photo": ""}, {"id": 60, "category": "Electronics", "sub": "", "name": "Full Body Analysis Scale", "price": 50, "qty": 1, "drop": null, "condition": "Good", "original": 199.99, "links": ["https://fsastore.com/full-body-analysis-scale-caring-mill-by-aura/40381.html"], "status": "On Hold", "photo": ""}, {"id": 61, "category": "Books", "sub": "", "name": "Book Stand", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 39.97, "links": ["https://www.amazon.com/dp/B0BLKFWDKP"], "status": "On Hold", "photo": ""}, {"id": 62, "category": "Miscellaneous", "sub": "", "name": "Ikea HÄSTVISKARE Entrance Organizer 42x15x11 cm", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "On Hold", "photo": ""}]}</script>
+<script id="data" type="application/json">{"updated": "Nov 8, 2026", "items": [{"id": 0, "row": 2, "category": "Plants", "sub": "Monstera", "name": "Monstera Deliciosa Large + Pot 10\"", "price": 100, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 1, "row": 3, "category": "Plants", "sub": "Monstera", "name": "Monstera BMX + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 2, "row": 4, "category": "Plants", "sub": "Monstera", "name": "Monstera Adansoni 3.5\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 3, "row": 5, "category": "Plants", "sub": "Monstera", "name": "Monstera Obliqua 4\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 4, "row": 6, "category": "Plants", "sub": "Monstera", "name": "Monstera Lemon Lime + Pot 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 5, "row": 7, "category": "Plants", "sub": "Monstera", "name": "Monstera Aurea 4\"", "price": 40, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 6, "row": 8, "category": "Plants", "sub": "Monstera", "name": "Monstera Adansoni 4\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 7, "row": 9, "category": "Plants", "sub": "Monstera", "name": "Monstera BMX + Pot 6.5\"", "price": 25, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 8, "row": 10, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur + Pot 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 9, "row": 11, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur + Pot 4\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 10, "row": 12, "category": "Plants", "sub": "Monstera", "name": "Monstera Bulbasaur 4\"", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 11, "row": 13, "category": "Plants", "sub": "Monstera", "name": "Monstera Electroryte 3\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 12, "row": 14, "category": "Plants", "sub": "Monstera", "name": "Monstera Yellow Marylin 3\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 13, "row": 15, "category": "Plants", "sub": "Monstera", "name": "Monstera Electroryte 3\" (Smaller)", "price": 15, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 14, "row": 16, "category": "Plants", "sub": "Monstera", "name": "Monstera PomPom", "price": 100, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 15, "row": 17, "category": "Plants", "sub": "Monstera", "name": "Monstera Cathy Mint", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 16, "row": 18, "category": "Plants", "sub": "Monstera", "name": "Monstera Legacy", "price": 50, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 17, "row": 19, "category": "Plants", "sub": "Monstera", "name": "Monstera Aurea + Pot 9\"", "price": 200, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 18, "row": 20, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Dark Phoenix", "price": 70, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 19, "row": 21, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Friedrichsthalii + Pot 6\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 20, "row": 22, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Red Velvet Cake + Pot 6\"", "price": 60, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 21, "row": 23, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Besseae Aff + Pot 7\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 22, "row": 24, "category": "Plants", "sub": "Anthurium", "name": "Anthurium Crystallinum + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 23, "row": 25, "category": "Plants", "sub": "Anthurium", "name": "Anthurium King (Veitchii) 6\"", "price": 70, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 24, "row": 26, "category": "Plants", "sub": "Fern", "name": "Blue Star Fern + Pot 6\"", "price": 20, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 25, "row": 27, "category": "Plants", "sub": "Fern", "name": "Blue Star Fern + Pot 6\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 26, "row": 28, "category": "Plants", "sub": "Fern", "name": "Staghorn Fern", "price": 60, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 27, "row": 29, "category": "Plants", "sub": "Others", "name": "Philodendron Tortum 4\"", "price": 30, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 28, "row": 30, "category": "Plants", "sub": "Others", "name": "Peperomia 4\"", "price": 5, "qty": 1, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 29, "row": 31, "category": "Plants", "sub": "Others", "name": "Alocasia Frydek 2.5\"", "price": 5, "qty": 2, "drop": null, "condition": "", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 30, "row": 32, "category": "Miscellaneous", "sub": "", "name": "Outdoor Tent Bundle", "price": 50, "qty": 1, "drop": null, "condition": "Good", "original": 194.85, "links": ["https://www.amazon.com/dp/B07FTF7SQG", "https://www.amazon.com/dp/B01N7507OT", "https://www.amazon.com/dp/B0CW388R7Y", "https://www.amazon.com/dp/B0D7MZNWNS"], "status": "Posted", "photo": ""}, {"id": 31, "row": 33, "category": "Miscellaneous", "sub": "", "name": "De-Architects Steel Vase", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 32, "row": 34, "category": "Miscellaneous", "sub": "", "name": "Pottery Wheel + Tool Kit", "price": 60, "qty": 1, "drop": null, "condition": "Good", "original": 156.68, "links": ["https://www.amazon.com/dp/B0B8Y8GZ48"], "status": "Posted", "photo": ""}, {"id": 33, "row": 35, "category": "Miscellaneous", "sub": "", "name": "Ikea LILJETRÄD Mirror", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 24.99, "links": ["https://www.ikea.com/us/en/p/liljetraed-mirror-black-00551049/"], "status": "Posted", "photo": ""}, {"id": 34, "row": 36, "category": "Miscellaneous", "sub": "", "name": "Christmas Tree + Decoration Bundle", "price": 30, "qty": 1, "drop": null, "condition": "Like New", "original": 101.93, "links": ["https://www.amazon.com/dp/B018FDYGVM", "https://www.amazon.com/dp/B07H7D8YH3", "https://www.amazon.com/dp/B08F7FCHQK"], "status": "Posted", "photo": ""}, {"id": 35, "row": 37, "category": "Miscellaneous", "sub": "", "name": "Whole Foods Cart", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 30.0, "links": [], "status": "Posted", "photo": ""}, {"id": 36, "row": 38, "category": "Miscellaneous", "sub": "", "name": "Ikea GRUBBAN Step", "price": 5, "qty": 1, "drop": null, "condition": "Good", "original": 23.0, "links": [], "status": "Posted", "photo": ""}, {"id": 37, "row": 39, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Burgundy", "price": 17, "qty": 1, "drop": null, "condition": "Like New", "original": 56.98, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "Posted", "photo": ""}, {"id": 38, "row": 40, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Bordeaux", "price": 16, "qty": 1, "drop": null, "condition": "Like New", "original": 53.63, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "Posted", "photo": ""}, {"id": 39, "row": 41, "category": "Kitchenware", "sub": "", "name": "Zalto Wine Glass Universal", "price": 15, "qty": 2, "drop": null, "condition": "Like New", "original": 52.52, "links": ["https://www.zalto.shop/shop/sortiment/denkart"], "status": "Posted", "photo": ""}, {"id": 40, "row": 42, "category": "Kitchenware", "sub": "", "name": "Ninja Power Blender Duo Pro", "price": 40, "qty": 1, "drop": null, "condition": "Good", "original": 139.97, "links": ["https://www.amazon.com/dp/B0CCPRK5G1"], "status": "Posted", "photo": ""}, {"id": 41, "row": 43, "category": "Kitchenware", "sub": "", "name": "Bella Slim Toaster", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 31.97, "links": ["https://www.amazon.com/dp/B0CYJBB2JQ"], "status": "Posted", "photo": ""}, {"id": 42, "row": 44, "category": "Kitchenware", "sub": "", "name": "Cosori Electric Kettle", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 39.99, "links": ["https://www.amazon.com/dp/B0BZDFXLYX"], "status": "Posted", "photo": ""}, {"id": 43, "row": 45, "category": "Kitchenware", "sub": "", "name": "Electric Egg Cooker", "price": 5, "qty": 1, "drop": null, "condition": "Good", "original": 11.99, "links": ["https://www.amazon.com/dp/B0C5HRJHGL"], "status": "Posted", "photo": ""}, {"id": 44, "row": 46, "category": "Kitchenware", "sub": "", "name": "Ikea 18-Piece Dinnerware Set (Matte Green)", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 44.99, "links": ["https://www.ikea.com/us/en/p/faergklar-18-piece-dinnerware-set-matte-green-60564708/"], "status": "Posted", "photo": ""}, {"id": 45, "row": 47, "category": "Kitchenware", "sub": "", "name": "Muji Coffee Dripper Set", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": ["https://www.muji.us/products/stainless-steel-coffee-dripper-22ss"], "status": "Posted", "photo": ""}, {"id": 46, "row": 48, "category": "Kitchenware", "sub": "", "name": "Ikea BLANDA MATT Bamboo Serving Bowl", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 24.99, "links": ["https://www.ikea.com/us/en/p/blanda-matt-serving-bowl-bamboo-60214343/"], "status": "Posted", "photo": ""}, {"id": 47, "row": 49, "category": "Kitchenware", "sub": "", "name": "Wine Decanter", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 48, "row": 50, "category": "Furniture", "sub": "", "name": "Ikea Trotten Desk, White, 63x31 1/2\"", "price": 50, "qty": 2, "drop": null, "condition": "Good", "original": 199.99, "links": ["https://www.ikea.com/us/en/p/trotten-desk-white-s79621921/"], "status": "Posted", "photo": ""}, {"id": 49, "row": 51, "category": "Furniture", "sub": "", "name": "Ikea Wood Desk", "price": 20, "qty": 1, "drop": null, "condition": "Fair", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 50, "row": 52, "category": "Furniture", "sub": "", "name": "Ikea HYLLIS Shelf Unit", "price": 5, "qty": 3, "drop": null, "condition": "Fair", "original": 22.99, "links": ["https://www.ikea.com/us/en/p/hyllis-shelf-unit-indoor-outdoor-30428326/"], "status": "Posted", "photo": ""}, {"id": 51, "row": 53, "category": "Furniture", "sub": "", "name": "Ikea LENNART Drawer", "price": 8, "qty": 1, "drop": null, "condition": "Like New", "original": 19.99, "links": ["https://www.ikea.com/us/en/p/lennart-drawer-unit-white-30326177/"], "status": "Posted", "photo": ""}, {"id": 52, "row": 54, "category": "Furniture", "sub": "", "name": "Round Dining Table 40\" (Target)", "price": 50, "qty": 1, "drop": null, "condition": "Fair", "original": 343.0, "links": ["https://www.target.com/p/-/A-1013329001"], "status": "Posted", "photo": ""}, {"id": 53, "row": 55, "category": "Furniture", "sub": "", "name": "Custom Shelf W 91\" D 7.5\" x H 25\" made by us", "price": 30, "qty": 1, "drop": null, "condition": "Good", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 54, "row": 56, "category": "Furniture", "sub": "", "name": "Trash Bin (used only 4 months!)", "price": 20, "qty": 1, "drop": null, "condition": "Like New", "original": 79.98, "links": ["https://www.amazon.com/dp/B0H2VMRRHH"], "status": "Posted", "photo": ""}, {"id": 55, "row": 57, "category": "Furniture", "sub": "", "name": "4 Tier Rolling Cart", "price": 10, "qty": 1, "drop": null, "condition": "Like New", "original": 29.99, "links": ["https://www.amazon.com/dp/B0CSYXLMHC"], "status": "Posted", "photo": ""}, {"id": 56, "row": 58, "category": "Electronics", "sub": "", "name": "Insignia TV 55\" LED 4K UHD + Stand", "price": 100, "qty": 1, "drop": null, "condition": "Like New", "original": 272.48, "links": [], "status": "Posted", "photo": ""}, {"id": 57, "row": 59, "category": "Electronics", "sub": "", "name": "Air Circulator", "price": 10, "qty": 1, "drop": null, "condition": "Good", "original": 59.99, "links": ["https://www.amazon.com/dp/B0DK5VZMNT"], "status": "Posted", "photo": ""}, {"id": 58, "row": 60, "category": "Electronics", "sub": "", "name": "Dell Dual Monitor", "price": 70, "qty": 1, "drop": null, "condition": "Fair", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 59, "row": 61, "category": "Electronics", "sub": "", "name": "Dell U2414H Monitor", "price": 40, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "Posted", "photo": ""}, {"id": 60, "row": 62, "category": "Electronics", "sub": "", "name": "Full Body Analysis Scale", "price": 50, "qty": 1, "drop": null, "condition": "Good", "original": 199.99, "links": ["https://fsastore.com/full-body-analysis-scale-caring-mill-by-aura/40381.html"], "status": "Posted", "photo": ""}, {"id": 61, "row": 63, "category": "Books", "sub": "", "name": "Book Stand", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": 39.97, "links": ["https://www.amazon.com/dp/B0BLKFWDKP"], "status": "Posted", "photo": ""}, {"id": 62, "row": 64, "category": "Miscellaneous", "sub": "", "name": "Ikea HÄSTVISKARE Entrance Organizer 42x15x11 cm", "price": 5, "qty": 1, "drop": null, "condition": "Like New", "original": null, "links": [], "status": "Posted", "photo": ""}]}</script>
 <script>
 const CONFIG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt/exec",   // Apps Script web app /exec URL (comments, reservations, live items)
@@ -245,7 +283,10 @@ const $ = id => document.getElementById(id);
 const money = v => { const n = parseFloat(String(v).replace(/[$,\s]/g,'')); return isFinite(n) ? n : null; };
 const fmt = n => '$' + (Number.isInteger(n) ? n : n.toFixed(2));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const key = it => it.name + '|' + it.price;
+const key = it => it.row ? 'r'+it.row : it.name + '|' + it.price;
+const cKey = it => `${it.name} · $${it.price}`;
+const avail = it => it.avail==null ? it.qty : it.avail;
+const isReserved = it => !isSold(it) && avail(it)<=0;
 const now = it => (it.drop!=null && it.drop>0 && it.drop<it.price) ? it.drop : it.price;
 const isSold = it => /sold/i.test(it.status);
 function photoUrl(u){ if(!u) return ''; const m=u.match(/(?:\/d\/|id=)([\w-]{20,})/); return /drive\.google\.com/.test(u)&&m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000` : u; }
@@ -270,7 +311,7 @@ function fromCSV(text){
 }
 
 /* ---------- state ---------- */
-const state = {cat:'All', q:'', sort:'cat', bag:new Set(), day:null, time:null, openItem:null};
+const state = {cat:'All', q:'', sort:'cat', bag:new Set(), n:{}, day:null, time:null, openItem:null, claim:null, waitItem:null, cancelToken:null};
 let ownerKey = '';
 try{ JSON.parse(localStorage.getItem('mos-bag')||'[]').forEach(k=>state.bag.add(k)); ownerKey = localStorage.getItem('mos-owner')||''; }catch(e){}
 
@@ -290,7 +331,7 @@ async function load(){
 
 /* ---------- listing ---------- */
 function visible(){
-  const posted = items.filter(i=>/posted|sold/i.test(i.status));
+  const posted = items.filter(i=>/posted|sold|reserved/i.test(i.status));
   const preview = location.hash==='#preview' || ownerKey || posted.length===0;
   const b=$('banner');
   if(preview && (posted.length===0 || location.hash==='#preview' || ownerKey)){
@@ -301,23 +342,23 @@ function visible(){
   } else b.style.display='none';
   return preview ? items : posted;
 }
-function qCount(i){ return comments.filter(c=>c.item===i.name && !c.parent && !c.owner).length; }
+function qCount(i){ return comments.filter(c=>c.item===cKey(i) && !c.parent && !c.owner).length; }
 
 function render(){
   const all = visible();
   const cats = CONFIG.catOrder.filter(c=>all.some(i=>i.category===c)).concat([...new Set(all.map(i=>i.category))].filter(c=>c && !CONFIG.catOrder.includes(c)));
-  const avail = all.filter(i=>!isSold(i));
-  const offs = avail.filter(i=>i.original).map(i=>1-now(i)/i.original);
+  const avail_ = all.filter(i=>!isSold(i) && !isReserved(i));
+  const offs = avail_.filter(i=>i.original).map(i=>1-now(i)/i.original);
   $('stats').innerHTML =
-    `<div class="stat"><b>${avail.length}</b><span>Items available</span></div>`+
-    `<div class="stat"><b>${avail.length?fmt(Math.min(...avail.map(now))):'–'}</b><span>Starting at</span></div>`+
+    `<div class="stat"><b>${avail_.length}</b><span>Items available</span></div>`+
+    `<div class="stat"><b>${avail_.length?fmt(Math.min(...avail_.map(now))):'–'}</b><span>Starting at</span></div>`+
     (offs.length?`<div class="stat"><b>${Math.round(offs.reduce((a,b)=>a+b,0)/offs.length*100)}%</b><span>Avg. off retail</span></div>`:'');
   $('chips').innerHTML = ['All',...cats].map(c=>{
     const n = c==='All'?all.length:all.filter(i=>i.category===c).length;
     return `<button class="chip" aria-pressed="${state.cat===c}" data-cat="${esc(c)}">${esc(c)}<small>${n}</small></button>`;}).join('');
   let list = all.filter(i=>(state.cat==='All'||i.category===state.cat) &&
     (!state.q || (i.name+' '+i.category+' '+i.sub).toLowerCase().includes(state.q)));
-  const soldLast=(a,b)=>isSold(a)-isSold(b);
+  const rank=i=>isSold(i)?2:isReserved(i)?1:0, soldLast=(a,b)=>rank(a)-rank(b);
   const out=$('list');
   if(!list.length){ out.innerHTML='<div class="empty">Nothing matches that yet.</div>'; return; }
   if(state.sort==='cat'){
@@ -334,9 +375,10 @@ function card(i){
   const sold=isSold(i), p=now(i), k=key(i), dropped = p<i.price;
   const off = i.original ? Math.round((1-p/i.original)*100) : null;
   const bg = `var(--${(i.category||'misc').toLowerCase()}, #e8e4dc)`;
-  const label = sold?'Sold':(dropped?'Price drop':'');
+  const resv = isReserved(i), claimed = state.claim && state.claim.row===i.row;
+  const label = sold?'Sold':(resv?'Reserved':(dropped?'Price drop':''));
   const links = i.links.map((u,n)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${i.links.length>1?'Item '+(n+1):'Original listing'} ↗</a>`).join('');
-  return `<article class="card${sold?' sold':''}">
+  return `<article class="card${sold?' sold':''}${resv?' reserved':''}">
     <div class="thumb" style="background:${bg}">
       ${i.photo?`<img src="${esc(photoUrl(i.photo))}" alt="${esc(i.name)}" loading="lazy" referrerpolicy="no-referrer">`:`<div class="mono">${esc(i.name.replace(/^ikea\s+/i,'')[0]||'')}</div>`}
       ${label?`<span class="tag">${label}</span>`:''}
@@ -346,7 +388,8 @@ function card(i){
       <div class="name">${esc(i.name)}</div>
       <div class="meta">
         ${i.condition?`<span class="pill cond-${i.condition.toLowerCase().replace(/\s+/g,'-')}">${esc(i.condition)}</span>`:''}
-        ${i.qty>1?`<span class="pill">${i.qty} available · price each</span>`:''}
+        ${i.qty>1 && !sold?`<span class="pill">${avail(i)} of ${i.qty} left · price each</span>`:''}
+        ${resv && i.waiting?`<span class="pill">${i.waiting} on waitlist</span>`:''}
       </div>
       <div class="price-row">
         <span class="price">${fmt(p)}</span>
@@ -358,7 +401,8 @@ function card(i){
         <div class="links">${links}</div>
         <div class="card-btns">
           <button class="ask" data-ask="${esc(k)}">Ask${qCount(i)?' ('+qCount(i)+')':''}</button>
-          <button class="add${state.bag.has(k)?' on':''}" data-key="${esc(k)}">${state.bag.has(k)?'✓ Added':'+ Add'}</button>
+          ${resv && !claimed ? `<button class="add wait" data-wait="${esc(k)}">Join waitlist</button>`
+            : `<button class="add${state.bag.has(k)?' on':''}" data-key="${esc(k)}">${state.bag.has(k)?'✓ Added':'+ Add'}</button>`}
         </div>
       </div>
     </div>
@@ -376,13 +420,20 @@ function times(day){ const we=day.dow===0||day.dow===6, out=[], t=etNow();
     const past = day.iso===t.date && m<=t.mins+60;
     out.push({v:`${hh}:${mm}`, label, off: past || booked.has(`${day.iso} ${hh}:${mm}`)}); }
   return out; }
-function selected(){ return items.filter(i=>state.bag.has(key(i)) && !isSold(i)); }
+function maxN(i){ return avail(i) + (state.claim && state.claim.row===i.row ? 1 : 0); }
+function selected(){ return items.filter(i=>state.bag.has(key(i)) && !isSold(i) && maxN(i)>0); }
+const cnt = i => Math.min(state.n[key(i)]||1, Math.max(1,maxN(i)));
+const lineTotal = i => now(i)*cnt(i);
 
 function renderBag(){
-  const sel = selected(), total = sel.reduce((a,i)=>a+now(i),0);
+  const sel = selected(), total = sel.reduce((a,i)=>a+lineTotal(i),0);
   const btn=$('bagBtn'); btn.style.display = sel.length?'block':'none';
   btn.textContent = `Your list · ${sel.length} · ${fmt(total)}`;
-  $('lines').innerHTML = sel.length ? sel.map(i=>`<div class="line"><span>${esc(i.name)}</span><span>${fmt(now(i))}<button data-key="${esc(key(i))}" data-remove>Remove</button></span></div>`).join('') : '<p class="hint">Your list is empty.</p>';
+  $('claimNote').hidden = !state.claim;
+  if(state.claim) $('claimNote').textContent = `“${state.claim.name}” is held for you until ${new Date(state.claim.expires).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}. Pick a time to lock it in.`;
+  $('lines').innerHTML = sel.length ? sel.map(i=>{ const m=maxN(i);
+    const q = m>1 ? `<select data-n="${esc(key(i))}" aria-label="Quantity">${Array.from({length:m},(_,n)=>`<option ${cnt(i)===n+1?'selected':''}>${n+1}</option>`).join('')}</select>` : '';
+    return `<div class="line"><span>${esc(i.name)} ${q}</span><span>${fmt(lineTotal(i))}<button data-key="${esc(key(i))}" data-remove>Remove</button></span></div>`; }).join('') : '<p class="hint">Your list is empty.</p>';
   $('total').textContent = fmt(total);
   const ds=days();
   $('days').innerHTML = ds.map(d=>`<button class="slot" data-day="${d.iso}" aria-pressed="${state.day===d.iso}">${d.label}<small>${d.num}</small></button>`).join('') || '<p class="hint">Pickup window has ended.</p>';
@@ -401,7 +452,7 @@ function renderThread(){
   const it = items.find(i=>key(i)===state.openItem); if(!it) return;
   $('qCat').textContent = it.category + (it.sub?' · '+it.sub:'');
   $('qTitle').textContent = it.name;
-  const qs = comments.filter(c=>c.item===it.name && !c.parent);
+  const qs = comments.filter(c=>c.item===cKey(it) && !c.parent);
   const when = t => { try{ return new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }catch(e){ return ''; } };
   const who = c => c.owner ? `<span class="owner-tag">Owner</span>` : esc(c.name);
   $('thread').innerHTML = (qs.length ? qs.map(q=>{
@@ -423,7 +474,10 @@ const closeM = () => document.querySelectorAll('.modal.open').forEach(m=>m.class
 document.addEventListener('click', e=>{
   const t=e.target;
   const c=t.closest('.chip'); if(c){ state.cat=c.dataset.cat; render(); const m=document.querySelector('main'); if(window.scrollY>m.offsetTop) window.scrollTo({top:m.offsetTop-60}); return; }
-  const a=t.closest('.add'); if(a){ const k=a.dataset.key; state.bag.has(k)?state.bag.delete(k):state.bag.add(k); render(); renderBag(); return; }
+  const a=t.closest('.add[data-key]'); if(a){ const k=a.dataset.key; state.bag.has(k)?state.bag.delete(k):state.bag.add(k); render(); renderBag(); return; }
+  const w=t.closest('[data-wait]'); if(w){ const it=items.find(i=>key(i)===w.dataset.wait); state.waitItem=it; $('waitTitle').textContent=it.name;
+    $('waitInfo').textContent = it.waiting ? `${it.waiting} ${it.waiting>1?'people are':'person is'} ahead of you.` : 'You would be first in line.';
+    $('waitForm').hidden=false; $('waitDone').hidden=true; $('waitErr').textContent=''; openM('waitModal'); return; }
   const q=t.closest('[data-ask]'); if(q){ state.openItem=q.dataset.ask; renderThread(); openM('itemModal'); return; }
   const r=t.closest('[data-remove]'); if(r){ state.bag.delete(r.dataset.key); render(); renderBag(); return; }
   const d=t.closest('[data-day]'); if(d){ state.day=d.dataset.day; state.time=null; renderBag(); return; }
@@ -433,28 +487,54 @@ document.addEventListener('click', e=>{
   if(t.closest('#bagBtn')) { renderBag(); $('drawer').classList.add('open'); }
   if(t.closest('[data-close]')) $('drawer').classList.remove('open');
   if(t.closest('[data-mclose]')) closeM();
-  if(t.closest('#nextBtn')){ $('slotSummary').textContent = `Pickup: ${slotText()} · ${selected().length} item(s), ${fmt(selected().reduce((a,i)=>a+now(i),0))}`; $('contactErr').textContent=''; $('contactForm').hidden=false; $('doneBox').hidden=true; openM('contactModal'); }
+  if(t.closest('#nextBtn')){
+  $('slotSummary').textContent = `Pickup: ${slotText()} · ${selected().length} item(s), ${fmt(selected().reduce((a,i)=>a+lineTotal(i),0))}`;
+  $('contactErr').textContent=''; $('contactForm').hidden=false; $('doneBox').hidden=true; openM('contactModal'); }
 });
 
 $('contactForm').addEventListener('submit', async e=>{
   e.preventDefault(); const f=e.target, btn=f.querySelector('[type=submit]'); btn.disabled=true; $('contactErr').textContent='';
   const sel=selected();
   try{
-    const res = await api({action:'reserve', items:sel.map(i=>i.name), total:sel.reduce((a,i)=>a+now(i),0), date:state.day, time:state.time,
+    const res = await api({action:'reserve', items:sel.map(i=>({row:i.row, name:i.name, n:cnt(i)})), claim:state.claim?state.claim.token:'', date:state.day, time:state.time,
       name:f.name.value, contact:f.contact.value, note:f.note.value, website:f.website.value});
     if(res.ok){
+      const link = location.origin + location.pathname + '?cancel=' + res.token;
       $('doneText').textContent = `${slotText()}. We'll reach out to ${f.contact.value} to confirm. Reservation #${res.id}.`;
-      booked.add(`${state.day} ${state.time}`); state.bag.clear(); state.time=null; f.reset();
-      $('contactForm').hidden=true; $('doneBox').hidden=false; $('drawer').classList.remove('open'); render(); renderBag();
-    } else $('contactErr').textContent = res.error==='taken' ? 'Someone just took that time — please pick another.' : 'Something went wrong. Please try again.';
+      $('cancelLink').value = link;
+      booked.add(`${state.day} ${state.time}`); state.bag.clear(); state.n={}; state.time=null; state.claim=null; f.reset();
+      history.replaceState(null,'',location.pathname);
+      $('contactForm').hidden=true; $('doneBox').hidden=false; $('drawer').classList.remove('open'); load();
+    } else $('contactErr').textContent = res.error==='taken' ? 'Someone just took that time — please pick another.'
+      : res.error==='unavailable' ? `Sorry — just reserved by someone else: ${res.items.join(', ')}. Remove it and try again, or join its waitlist.`
+      : 'Something went wrong. Please try again.';
+    if(res.error==='unavailable') load();
     if(res.error==='taken'){ booked.add(`${state.day} ${state.time}`); state.time=null; renderBag(); }
   }catch(err){ $('contactErr').textContent='Could not reach the server. Please try again.'; }
   btn.disabled=false;
 });
 
+document.addEventListener('change', e=>{ const s=e.target.closest('[data-n]'); if(s){ state.n[s.dataset.n]=+s.value; renderBag(); } });
+$('waitForm').addEventListener('submit', async e=>{
+  e.preventDefault(); const f=e.target, it=state.waitItem, btn=f.querySelector('[type=submit]'); btn.disabled=true; $('waitErr').textContent='';
+  try{ const res=await api({action:'waitlist', row:it.row, name:it.name, email:f.email.value, website:f.website.value});
+    if(res.ok){ $('waitDoneText').textContent = res.already ? `You're already on the list for “${it.name}”.` : `You're #${res.position} for “${it.name}”. If it frees up, we'll email ${f.email.value} a link to reserve it — you'll have 24 hours to book.`;
+      f.reset(); $('waitForm').hidden=true; $('waitDone').hidden=false; load(); }
+    else $('waitErr').textContent = res.error==='email' ? 'Please enter a valid email.' : 'Could not join the waitlist. Please try again.';
+  }catch(err){ $('waitErr').textContent='Could not reach the server.'; }
+  btn.disabled=false;
+});
+$('cancelYes').addEventListener('click', async e=>{
+  e.target.disabled=true;
+  try{ const res=await api({action:'cancel', token:state.cancelToken});
+    $('cancelText').textContent = res.ok ? 'Your reservation is cancelled. Thanks for letting us know!' : (res.error==='picked up' ? 'This reservation was already picked up.' : 'We could not find that reservation.');
+    $('cancelYes').hidden=true; history.replaceState(null,'',location.pathname); load();
+  }catch(err){ $('cancelText').textContent='Could not reach the server. Please try again.'; e.target.disabled=false; }
+});
+$('copyCancel').addEventListener('click', async e=>{ const t=$('cancelLink'); try{ await navigator.clipboard.writeText(t.value); e.target.textContent='Copied ✓'; }catch(_){ t.select(); } });
 $('askForm').addEventListener('submit', async e=>{
   e.preventDefault(); const f=e.target, it=items.find(i=>key(i)===state.openItem), btn=f.querySelector('[type=submit]'); btn.disabled=true; $('askErr').textContent='';
-  try{ const res=await api({action:'comment', item:it.name, text:f.text.value, website:f.website.value});
+  try{ const res=await api({action:'comment', item:cKey(it), label:it.name, text:f.text.value, website:f.website.value});
     if(res.ok){ f.reset(); await load(); renderThread(); } else $('askErr').textContent='Could not post. Please try again.';
   }catch(err){ $('askErr').textContent='Could not reach the server.'; }
   btn.disabled=false;
@@ -462,7 +542,7 @@ $('askForm').addEventListener('submit', async e=>{
 $('thread').addEventListener('submit', async e=>{
   if(!e.target.matches('.reply-form')) return; e.preventDefault();
   const f=e.target, it=items.find(i=>key(i)===state.openItem);
-  const res=await api({action:'reply', item:it.name, parent:f.dataset.parent, text:f.querySelector('textarea').value, key:ownerKey});
+  const res=await api({action:'reply', item:cKey(it), parent:f.dataset.parent, text:f.querySelector('textarea').value, key:ownerKey});
   if(res.ok){ await load(); renderThread(); }
 });
 
@@ -483,7 +563,26 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeM(); $('dra
 
 function refresh(){ render(); renderBag(); if($('itemModal').classList.contains('open')) renderThread();
   $('updated').textContent = (source==='live'?'Live from the sale sheet':'Last updated '+updatedAt) + ' · Prices are per item.'; }
-applyOwner(); onHash(); refresh(); load();
+async function handleParams(){
+  const p = new URLSearchParams(location.search);
+  if(!CONFIG.apiUrl) return;
+  if(p.get('claim')){
+    try{ const d = await (await fetch(CONFIG.apiUrl+'?claim='+encodeURIComponent(p.get('claim')))).json();
+      if(d.ok){ state.claim={token:p.get('claim'), row:d.row, name:d.name, expires:d.expires}; state.bag.add('r'+d.row); refresh(); $('drawer').classList.add('open'); }
+      else { $('cancelTitle').textContent='Hold not available'; $('cancelText').textContent = d.error==='expired' ? 'Sorry — the 24-hour hold on this item has ended and it moved to the next person.' : d.error==='claimed' ? 'This hold was already used to make a reservation.' : 'We could not find this hold.'; $('cancelYes').hidden=true; openM('cancelModal'); }
+    }catch(e){}
+  }
+  if(p.get('cancel')){
+    state.cancelToken=p.get('cancel');
+    try{ const d = await (await fetch(CONFIG.apiUrl+'?res='+encodeURIComponent(state.cancelToken))).json();
+      $('cancelTitle').textContent='Cancel reservation?';
+      if(d.ok && !/cancel/i.test(d.status)){ $('cancelText').textContent=`#${d.id} · ${d.date} at ${d.time} · ${d.items.join(', ')}`; $('cancelYes').hidden=false; }
+      else { $('cancelText').textContent = d.ok ? 'This reservation is already cancelled.' : 'We could not find that reservation.'; $('cancelYes').hidden=true; }
+      openM('cancelModal');
+    }catch(e){}
+  }
+}
+applyOwner(); onHash(); refresh(); load().then(handleParams);
 setInterval(load, 60000);
 </script>
 </body>
