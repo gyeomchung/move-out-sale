@@ -26,6 +26,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
+const BACKEND_VERSION = '2026-11-08.1';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -67,7 +68,7 @@ function doGet(e) {
   const p = (e && e.parameter) || {};
   if (p.claim) return json_(claimInfo_(p.claim));
   if (p.res) return json_(resInfo_(p.res));
-  return json_({ items: items_(), comments: comments_(), booked: booked_() });
+  return json_({ v: BACKEND_VERSION, items: items_(), comments: comments_(), booked: booked_() });
 }
 
 function doPost(e) {
