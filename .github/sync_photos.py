@@ -18,6 +18,9 @@ for i in sorted(ids):
     ok = (r.returncode == 0 and os.path.exists(out) and os.path.getsize(out) > 2000
           and open(out, 'rb').read(3) in (b'\xff\xd8\xff', b'\x89PN'))
     if ok:
+        from PIL import Image, ImageOps   # shrink for phones: max 800px wide, JPEG q80
+        im = ImageOps.exif_transpose(Image.open(out)).convert('RGB'); im.thumbnail((800, 1067))
+        im.save(out, 'JPEG', quality=80, optimize=True, progressive=True)
         print('saved', out, os.path.getsize(out))
     else:
         print('failed', i)

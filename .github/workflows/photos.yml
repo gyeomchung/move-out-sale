@@ -20,6 +20,7 @@ jobs:
         run: |
           API=$(grep -o 'https://script.google.com/macros/s/[^"]*/exec' index.html | head -1)
           curl -sSL "$API" -o /tmp/items.json
+          pip install -q pillow
           python3 .github/sync_photos.py
       - name: Commit
         run: |
