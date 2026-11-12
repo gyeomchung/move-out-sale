@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-11.1';
+const BACKEND_VERSION = '2026-11-12.1';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -71,6 +71,7 @@ function doGet(e) {
   const p = (e && e.parameter) || {};
   if (p.claim) return json_(claimInfo_(p.claim));
   if (p.res) return json_(resInfo_(p.res));
+  if (p.ics) return icsFeed_(p.ics);
   return json_({ v: BACKEND_VERSION, items: items_(), comments: comments_(), booked: booked_() });
 }
 
@@ -428,4 +429,35 @@ function selfUpdate_(force, sha) {
     }
     return { ok: false, error: msg };
   } finally { lock.releaseLock(); }
+}
+
+/* ======================= calendar feed (owner only) ======================= */
+// Apple/Google Calendar subscribe to  <web app URL>?ics=<key>  — the key lives in the sheet (Settings!B3), not here.
+
+function icsFeed_(key) {
+  let want = '';
+  try { want = String(ss_().getSheetByName('Settings').getRange('B3').getValue()).trim(); } catch (e) {}
+  if (!want || key !== want) return ContentService.createTextOutput('not found');
+  const esc = s => String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const utc = d => Utilities.formatDate(d, 'UTC', "yyyyMMdd'T'HHmmss'Z'");
+  const fold = line => { const out = []; while (line.length > 73) { out.push(line.slice(0, 73)); line = ' ' + line.slice(73); } out.push(line); return out.join('\r\n'); };
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//move-out-sale//pickups//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'X-WR-CALNAME:Move Out Sale', 'X-WR-TIMEZONE:' + TZ, 'X-APPLE-CALENDAR-COLOR:#8E5CF7',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT15M', 'X-PUBLISHED-TTL:PT15M'];
+  const now = utc(new Date());
+  resRows_().filter(activeRes_).forEach(r => {
+    let start;
+    try { start = Utilities.parseDate(r.date + ' ' + r.time, TZ, 'yyyy-MM-dd HH:mm'); } catch (e) { return; }
+    const end = new Date(start.getTime() + 30 * 60e3);
+    const what = r.items.map(i => i.name + (i.n > 1 ? ' × ' + i.n : '')).join(', ');
+    const picked = /picked/i.test(r.status) ? '✓ ' : '';
+    const desc = 'Reservation #' + r.id + ' (' + r.status + ')\nBuyer: ' + r.name + '\nContact: ' + r.contact +
+      '\nItems:\n' + r.items.map(i => '• ' + i.name + (i.n > 1 ? ' × ' + i.n : '')).join('\n') + (r.note ? '\nNote: ' + r.note : '');
+    lines.push('BEGIN:VEVENT', 'UID:res-' + r.id + '@move-out-sale', 'DTSTAMP:' + now, 'DTSTART:' + utc(start), 'DTEND:' + utc(end),
+      fold('SUMMARY:' + esc(picked + '픽업: ' + r.name + ' — ' + what)), fold('DESCRIPTION:' + esc(desc)),
+      'LOCATION:Downtown Brooklyn (home)', 'STATUS:CONFIRMED',
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc('Pickup: ' + r.name), 'TRIGGER:-PT60M', 'END:VALARM', 'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return ContentService.createTextOutput(lines.join('\r\n') + '\r\n').setMimeType(ContentService.MimeType.ICAL);
 }

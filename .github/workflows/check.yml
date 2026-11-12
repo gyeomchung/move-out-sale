@@ -13,3 +13,18 @@ jobs:
         with: { node-version: 20 }
       - run: cp backend/Code.gs /tmp/code.js && node --check /tmp/code.js
       - run: node -e "JSON.parse(require('fs').readFileSync('backend/appsscript.json','utf8'))"
+  deploy:
+    # After a backend change lands on main, ask the Apps Script to pull this exact commit right away.
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger self-update
+        run: |
+          API=$(grep -o 'https://script.google.com/macros/s/[^"]*/exec' index.html | head -1)
+          for i in 1 2 3; do
+            R=$(curl -sSL -X POST -H 'Content-Type: text/plain' -d "{\"action\":\"sync\",\"sha\":\"$GITHUB_SHA\"}" "$API")
+            echo "$R"; echo "$R" | grep -q '"ok":true' && exit 0; sleep 25
+          done
+          exit 1
