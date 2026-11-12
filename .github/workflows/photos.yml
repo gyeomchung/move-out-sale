@@ -1,0 +1,29 @@
+name: Sync photos
+# Copies item photos from Google Drive into images/ so the site serves them itself
+# (Drive links are blocked by some phone browsers, e.g. Samsung Internet).
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['images/**']
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: photos, cancel-in-progress: false }
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download new photos
+        run: |
+          API=$(grep -o 'https://script.google.com/macros/s/[^"]*/exec' index.html | head -1)
+          curl -sSL "$API" -o /tmp/items.json
+          python3 .github/sync_photos.py
+      - name: Commit
+        run: |
+          git config user.name "photo-sync"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add images
+          git diff --cached --quiet || (git commit -m "Sync item photos from Drive" && git push)

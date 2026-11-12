@@ -20,19 +20,22 @@
  *  - Sold: set the item's Status to "Sold" in the Move Out Sale tab.
  */
 
-const OWNER_EMAIL = 'gyeomcc@gmail.com';
 const SITE_URL = 'https://gyeomchung.github.io/move-out-sale/';
 const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-08.2';
+const BACKEND_VERSION = '2026-11-11.1';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
 const RES_HEAD = ['Time', 'ID', 'Items', 'Total', 'Pickup Date', 'Pickup Time', 'Name', 'Contact', 'Note', 'Status', 'Token', 'Released'];
 const WAIT_HEAD = ['Time', 'ID', 'Row', 'Item', 'Email', 'Status', 'Offered At', 'Token'];
 
+// Owner's notification email lives in the sheet (Settings!B1), not in this public code
+function ownerEmail_() {
+  try { return String(ss_().getSheetByName('Settings').getRange('B1').getValue()).trim(); } catch (e) { return Session.getEffectiveUser().getEmail(); }
+}
 function ss_() { return SpreadsheetApp.openById(SHEET_ID); }
 function sh_(name) { return ss_().getSheetByName(name); }
 
@@ -179,7 +182,7 @@ function comment_(b) {
   if (!text || !item) return { ok: false, error: 'empty' };
   const id = Utilities.getUuid().slice(0, 8), name = 'Guest ' + id.slice(0, 4).toUpperCase();
   sh_(COMMENTS_TAB).appendRow([new Date(), id, item, name, text, '', false, false]);
-  MailApp.sendEmail(OWNER_EMAIL, '[Move-Out Sale] New question: ' + label,
+  MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] New question: ' + label,
     name + ' asked about "' + label + '":\n\n' + text + '\n\nReply in owner mode: ' + SITE_URL + '#owner');
   return { ok: true };
 }
@@ -241,7 +244,7 @@ function reserve_(b) {
 
   const nice = niceDate_(date), list_ = lines.map(l => '• ' + l.name + (l.n > 1 ? ' × ' + l.n : '') + ' — $' + (l.unit * l.n)).join('\n');
   const cancelUrl = SITE_URL + '?cancel=' + token;
-  MailApp.sendEmail(OWNER_EMAIL, '[Move-Out Sale] Pickup reserved — ' + nice + ' ' + time12_(time) + ' · ' + name,
+  MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Pickup reserved — ' + nice + ' ' + time12_(time) + ' · ' + name,
     'Reservation #' + id + (claim ? ' (from waitlist)' : '') + '\n\nName: ' + name + '\nContact: ' + contact +
     '\nPickup: ' + nice + ' at ' + time12_(time) + '\n\nItems:\n' + list_ + '\nTotal: $' + total + (note ? '\n\nNote: ' + note : '') +
     '\n\nTo cancel: set Status to "Cancelled" in the Reservations tab, or open ' + cancelUrl);
@@ -268,7 +271,7 @@ function cancel_(b) {
   const sh = sh_(RES_TAB);
   sh.getRange(r.sheetRow, 10).setValue('Cancelled');
   sh.getRange(r.sheetRow, 12).setValue(true);
-  MailApp.sendEmail(OWNER_EMAIL, '[Move-Out Sale] Reservation cancelled — ' + r.name,
+  MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Reservation cancelled — ' + r.name,
     'Reservation #' + r.id + ' (' + niceDate_(r.date) + ' ' + time12_(r.time) + ') was cancelled by the buyer.\n\nItems:\n' +
     r.items.map(i => '• ' + i.name).join('\n') + '\n\nWaitlisted buyers (if any) are being notified automatically.');
   release_(r.items.map(i => i.row));
@@ -291,7 +294,7 @@ function waitlist_(b) {
   MailApp.sendEmail(email, "You're on the waitlist — " + it.name,
     "Thanks! You're #" + (ahead + 1) + ' on the waitlist for "' + it.name + '".\n\n' +
     "If it frees up, we'll email you a link to reserve it. You'll have " + HOLD_HOURS + ' hours to book before it goes to the next person.\n\n' + SITE_URL);
-  MailApp.sendEmail(OWNER_EMAIL, '[Move-Out Sale] Waitlist: ' + it.name, email + ' joined the waitlist (#' + (ahead + 1) + ') for "' + it.name + '".');
+  MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Waitlist: ' + it.name, email + ' joined the waitlist (#' + (ahead + 1) + ') for "' + it.name + '".');
   release_([it.row]);    // in case a unit is actually free right now
   return { ok: true, position: ahead + 1 };
 }
@@ -315,7 +318,7 @@ function release_(rows) {
         'Good news — "' + it.name + '" from the move-out sale is available, and we\'re holding it for you.\n\n' +
         'Pick a pickup time here within ' + HOLD_HOURS + ' hours:\n' + SITE_URL + '?claim=' + token + '\n\n' +
         "If you don't reserve by then, it will be offered to the next person on the waitlist.");
-      MailApp.sendEmail(OWNER_EMAIL, '[Move-Out Sale] Offered to waitlist: ' + it.name,
+      MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Offered to waitlist: ' + it.name,
         '"' + it.name + '" was offered to ' + next.email + ' (holds for ' + HOLD_HOURS + 'h).');
     }
   });
@@ -421,7 +424,7 @@ function selfUpdate_(force, sha) {
     const props = PropertiesService.getScriptProperties(), msg = String(err && err.message || err);
     if (props.getProperty('LAST_UPDATE_ERROR') !== msg) {
       props.setProperty('LAST_UPDATE_ERROR', msg);
-      MailApp.sendEmail(OWNER_EMAIL, '[Move-Out Sale] Auto-deploy failed', msg);
+      MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Auto-deploy failed', msg);
     }
     return { ok: false, error: msg };
   } finally { lock.releaseLock(); }

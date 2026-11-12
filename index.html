@@ -290,7 +290,10 @@ const avail = it => it.avail==null ? it.qty : it.avail;
 const isReserved = it => !isSold(it) && avail(it)<=0;
 const now = it => (it.drop!=null && it.drop>0 && it.drop<it.price) ? it.drop : it.price;
 const isSold = it => /sold/i.test(it.status);
-function photoUrl(u){ if(!u) return ''; const m=u.match(/(?:\/d\/|id=)([\w-]{20,})/); return /drive\.google\.com/.test(u)&&m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000` : u; }
+const driveId = u => { const m=String(u||'').match(/(?:\/d\/|id=)([\w-]{20,})/); return /drive\.google\.com/.test(u)&&m ? m[1] : null; };
+// Photos are copied into images/ by the "Sync photos" GitHub Action; Drive is only a fallback until the copy exists.
+function photoUrl(u){ if(!u) return ''; const id=driveId(u); return id ? `images/${id}.jpg` : u; }
+function photoFallback(img){ const id=img.dataset.drive; if(id && !img.dataset.tried){ img.dataset.tried=1; img.src=`https://drive.google.com/thumbnail?id=${id}&sz=w1000`; } else { img.remove(); } }
 
 function parseCSV(t){
   const rows=[];let r=[],f='',q=false;
@@ -381,7 +384,7 @@ function card(i){
   const links = i.links.map((u,n)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${i.links.length>1?'Item '+(n+1):'Original listing'} ↗</a>`).join('');
   return `<article class="card${sold?' sold':''}${resv?' reserved':''}">
     <div class="thumb${i.photo?' has-photo':''}" style="background:${bg}">
-      ${i.photo?`<img src="${esc(photoUrl(i.photo))}" alt="${esc(i.name)}" loading="lazy" referrerpolicy="no-referrer">`:`<div class="mono">${esc(i.name.replace(/^ikea\s+/i,'')[0]||'')}</div>`}
+      ${i.photo?`<img src="${esc(photoUrl(i.photo))}" data-drive="${esc(driveId(i.photo)||'')}" onerror="photoFallback(this)" alt="${esc(i.name)}" loading="lazy" referrerpolicy="no-referrer">`:`<div class="mono">${esc(i.name.replace(/^ikea\s+/i,'')[0]||'')}</div>`}
       ${label?`<span class="tag">${label}</span>`:''}
       ${i.photo?'':`<span class="cat">${esc(i.sub||i.category)}</span>`}
     </div>
