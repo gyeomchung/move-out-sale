@@ -1,7 +1,7 @@
 name: Check backend
 on:
   push:
-    paths: ['backend/**']
+    paths: ['backend/**', '.github/workflows/check.yml']
   pull_request:
     paths: ['backend/**']
 jobs:
@@ -24,7 +24,7 @@ jobs:
         run: |
           API=$(grep -o 'https://script.google.com/macros/s/[^"]*/exec' index.html | head -1)
           for i in 1 2 3; do
-            R=$(curl -sSL -X POST -H 'Content-Type: text/plain' -d "{\"action\":\"sync\",\"sha\":\"$GITHUB_SHA\"}" "$API")
-            echo "$R"; echo "$R" | grep -q '"ok":true' && exit 0; sleep 25
+            R=$(curl -sSL -H 'Content-Type: text/plain' -d "{\"action\":\"sync\",\"sha\":\"$GITHUB_SHA\"}" "$API")
+            echo "$R" | head -c 300; echo; echo "$R" | grep -q '"ok":true' && exit 0; sleep 25
           done
           exit 1
