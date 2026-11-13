@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-12.1';
+const BACKEND_VERSION = '2026-11-12.2';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -72,7 +72,7 @@ function doGet(e) {
   if (p.claim) return json_(claimInfo_(p.claim));
   if (p.res) return json_(resInfo_(p.res));
   if (p.ics) return icsFeed_(p.ics);
-  return json_({ v: BACKEND_VERSION, items: items_(), comments: comments_(), booked: booked_() });
+  return json_({ v: BACKEND_VERSION, items: items_(), comments: comments_(), booked: booked_(), blocked: blockedDays_() });
 }
 
 function doPost(e) {
@@ -364,7 +364,16 @@ function tick() {
 
 /* ======================= helpers ======================= */
 
+// Days with no pickups, from the sheet: Settings!B4, comma-separated YYYY-MM-DD
+function blockedDays_() {
+  try {
+    const v = ss_().getSheetByName('Settings').getRange('B4').getDisplayValue();
+    return String(v).split(/[,\s]+/).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
+  } catch (e) { return []; }
+}
+
 function validSlot_(date, time) {
+  if (blockedDays_().indexOf(date) >= 0) return false;
   if (!/^2026-(11|12)-\d{2}$/.test(date) || date < '2026-11-09' || date > '2026-12-03') return false;
   const m = /^(\d{1,2}):(\d{2})$/.exec(time); if (!m) return false;
   const mins = (+m[1]) * 60 + (+m[2]); if (mins % 30) return false;

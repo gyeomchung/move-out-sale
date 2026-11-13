@@ -31,3 +31,5 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
 ## Calendar feed
 - `<web app URL>?ics=<key>` serves active reservations as an iCalendar feed ("Move Out Sale"), which Gyeom subscribes
   to in Apple Calendar. The key is in the sheet's Settings!B3 — never commit it.
+- Blocked pickup days: sheet Settings!B4 (comma-separated YYYY-MM-DD, store as text). Backend rejects them and
+  returns them as `blocked`; the site hides those days.

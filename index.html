@@ -275,6 +275,7 @@ const CONFIG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt/exec",   // Apps Script web app /exec URL (comments, reservations, live items)
   csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnPWGRf5-ZinHgZgKU3GJjm9m0k27HBGnBHgyOGz1F2deHZ30OMP1NMjnH_GJlM7mokOH3KjStApsv/pub?gid=1708984561&single=true&output=csv",
   firstDay: "2026-11-09", lastDay: "2026-12-03",
+  blockedDays: ["2026-11-20"],   // fallback; live list comes from the sheet (Settings!B4)
   catOrder: ["Furniture","Electronics","Kitchenware","Plants","Miscellaneous","Books"]
 };
 const embedded = JSON.parse(document.getElementById('data').textContent);
@@ -328,7 +329,7 @@ async function load(){
   if(CONFIG.apiUrl){
     try{ const d = await (await fetch(CONFIG.apiUrl)).json();
       if(d.items && d.items.length){ items=d.items; source='live'; }
-      comments=d.comments||[]; booked=new Set(d.booked||[]); refresh(); return; }catch(e){}
+      comments=d.comments||[]; booked=new Set(d.booked||[]); if(Array.isArray(d.blocked)) CONFIG.blockedDays=d.blocked; refresh(); return; }catch(e){}
   }
   try{ const t = await (await fetch(CONFIG.csvUrl)).text(); const live=fromCSV(t); if(live.length){ items=live; source='live'; refresh(); } }catch(e){}
 }
@@ -416,7 +417,7 @@ function card(i){
 /* ---------- list + booking ---------- */
 function etNow(){ const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()); const g=t=>p.find(x=>x.type===t).value; return {date:`${g('year')}-${g('month')}-${g('day')}`, mins:(+g('hour')%24)*60+(+g('minute'))}; }
 function days(){ const out=[]; const d=new Date(CONFIG.firstDay+'T12:00:00'), end=new Date(CONFIG.lastDay+'T12:00:00'), t=etNow();
-  for(;d<=end;d.setDate(d.getDate()+1)){ const iso=d.toISOString().slice(0,10); if(iso>=t.date) out.push({iso, dow:d.getDay(), label:d.toLocaleDateString('en-US',{weekday:'short'}), num:d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}); }
+  for(;d<=end;d.setDate(d.getDate()+1)){ const iso=d.toISOString().slice(0,10); if(iso>=t.date && !CONFIG.blockedDays.includes(iso)) out.push({iso, dow:d.getDay(), label:d.toLocaleDateString('en-US',{weekday:'short'}), num:d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}); }
   return out; }
 function times(day){ const we=day.dow===0||day.dow===6, out=[], t=etNow();
   for(let m=(we?9*60:18*60+30); m<=21*60+30; m+=30){ const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
