@@ -20,12 +20,13 @@
   .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
   header{padding:56px 0 28px;border-bottom:1px solid var(--line)}
   .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-  h1{font-family:"Instrument Serif",serif;font-weight:400;font-size:clamp(48px,8vw,96px);line-height:.95;letter-spacing:-.01em;margin:14px 0 18px}
+  h1{font-family:"Instrument Serif",serif;font-weight:400;font-size:clamp(40px,6.5vw,72px);line-height:1;letter-spacing:-.01em;margin:12px 0 16px}
+  header .eyebrow{font-size:14px;letter-spacing:.08em;color:#4d4a43;line-height:1.5}
   h1 em{color:var(--accent)}
-  .lede{max-width:560px;color:var(--muted);font-size:16px}
-  .stats{display:flex;gap:36px;flex-wrap:wrap;margin-top:28px}
-  .stat b{display:block;font-family:"Instrument Serif",serif;font-weight:400;font-size:34px;line-height:1}
-  .stat span{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+  .lede{max-width:600px;color:#3f3c36;font-size:18px;line-height:1.55}
+  .stats{display:flex;gap:28px;flex-wrap:wrap;margin-top:24px}
+  .stat b{display:block;font-family:"Instrument Serif",serif;font-weight:400;font-size:24px;line-height:1}
+  .stat span{font-size:10.5px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
   .banner{margin-top:24px;padding:10px 14px;border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent);font-size:13px;border-radius:6px;display:none}
 
   .toolbar{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
@@ -122,7 +123,8 @@
   footer{color:var(--muted);font-size:12px;padding:24px 0 40px}
   @media (max-width:640px){
     .card-btns{justify-content:space-between}
-    header{padding-top:36px}.stats{gap:22px}
+    header{padding-top:32px}.stats{gap:22px}
+    header .eyebrow{font-size:13px}.lede{font-size:17px}
     .toolbar .wrap{gap:8px;padding-top:10px;padding-bottom:10px}
     .chips{flex:0 0 calc(100% + 48px);flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -24px;padding:0 24px}
     .chips::-webkit-scrollbar{display:none}
