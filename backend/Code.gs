@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-13.1';
+const BACKEND_VERSION = '2026-11-13.2';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -101,6 +101,7 @@ function doPost(e) {
       case 'waitlist': return json_(waitlist_(b));
       case 'checkKey': return json_({ ok: isOwner_(b.key) });
       case 'testNotify': return json_(testNotify_(b));
+      case 'ownerReserve': return json_(ownerReserve_(b));
       default: return json_({ ok: false, error: 'unknown action' });
     }
   } finally { lock.releaseLock(); }
@@ -524,4 +525,27 @@ function testNotify_(b) {
     'This is a test from the move-out sale site.\n\nFrom now on, every new pickup reservation and every cancellation is emailed to:\n' +
     to.split(',').join('\n') + '\n\nNo action needed.');
   return { ok: true, to: to.split(',').length };
+}
+
+// Owner-only: record a deal made outside the site (any date/time, no slot rules). Items are matched by exact name.
+// Appears in the calendar feed and marks the items Reserved, like the hand-made OWNER rows.
+function ownerReserve_(b) {
+  if (!isOwner_(b.key)) return { ok: false, error: 'not owner' };
+  const date = clean_(b.date, 10), time = clean_(b.time, 5);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { ok: false, error: 'bad date/time' };
+  const { list } = itemRows_();
+  const lines = [], missing = [];
+  let total = 0;
+  (b.items || []).forEach(n => {
+    const it = list.find(i => i.name === clean_(n, 200));
+    if (!it) { missing.push(n); return; }
+    lines.push(it.row + '|1|' + it.name); total += it.price;
+  });
+  if (missing.length || !lines.length) return { ok: false, error: 'item not found', items: missing };
+  const n = resRows_().filter(r => /^OWNER\d+$/.test(r.id)).length + 1;
+  const id = 'OWNER' + n;
+  sh_(RES_TAB).appendRow([new Date(), id, lines.join('\n'), total, "'" + date, "'" + time, clean_(b.name, 80) || 'Offline buyer', '',
+    clean_(b.note, 300) || 'Arranged offline', 'Confirmed', '', false]);
+  syncStatuses_();
+  return { ok: true, id: id, total: total };
 }
