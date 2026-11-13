@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-13.5';
+const BACKEND_VERSION = '2026-11-13.6';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -569,7 +569,9 @@ function runOwnerSeeds_() {
 // OP_<id>); its result — IDs and counts only, never names or contacts — is returned publicly as `ops` by doGet.
 const OWNER_OPS = [
   // 2026-11-13: today's buyer didn't show for Monstera Cathy Mint → move it to Bonnie's Sunday (11/15) pickup
-  { id: 'OP1', run: () => moveItem_(/monstera.*cathy.*mint/i, '2026-11-13', /bonnie/i, 'Bonnie', '2026-11-15', 'No-show 11/13') }
+  { id: 'OP1', run: () => moveItem_(/monstera.*cathy.*mint/i, '2026-11-13', /bonnie/i, 'Bonnie', '2026-11-15', 'No-show 11/13') },
+  // 2026-11-13: today's pottery-wheel buyer drops Bulbasaur A (no discount) → price $40, item goes to waitlist #1
+  { id: 'OP2', run: () => dropToWaitlist_(/bulbasaur.*\(A\)/i, '2026-11-13', /wheel/i, 40) }
 ];
 function runOwnerOps_() {
   const props = PropertiesService.getScriptProperties();
@@ -634,6 +636,39 @@ function moveItem_(itemRe, fromDate, toRe, toLabel, toDate, note) {
     out.fromCancelled = true;
   }
   syncStatuses_();
+  return out;
+}
+
+// Remove an item from the reservation on `date` that also holds an item matching otherRe, set its new public price,
+// then release it so the first person on its waitlist gets the 24h claim email (release_).
+function dropToWaitlist_(itemRe, date, otherRe, newPrice) {
+  const { list } = itemRows_();
+  const hits = list.filter(i => itemRe.test(i.name));
+  if (hits.length !== 1) return { ok: false, error: 'item matched ' + hits.length };
+  const it = hits[0], oldUnit = unitPrice_(it);
+  const res = resRows_().filter(r => activeRes_(r) && !/picked/i.test(r.status) && r.date === date &&
+    r.items.some(i => i.row === it.row) && r.items.some(i => otherRe.test(i.name)));
+  if (res.length !== 1) return { ok: false, error: 'reservation matched ' + res.length };
+  const r = res[0], sh = sh_(RES_TAB), left = r.items.filter(i => i.row !== it.row), out = { ok: true, item: it.name, res: r.id };
+  // 1) take it off the reservation (total drops by the old price)
+  sh.getRange(r.sheetRow, 3).setValue(left.map(lineStr_).join('\n'));
+  const tot = parseFloat(String(sh.getRange(r.sheetRow, 4).getValue()).replace(/[$,]/g, '')) || 0;
+  sh.getRange(r.sheetRow, 4).setValue(Math.max(0, tot - oldUnit));
+  const n = sh.getRange(r.sheetRow, 9).getValue();
+  sh.getRange(r.sheetRow, 9).setValue((n ? n + ' · ' : '') + it.name + ' removed 11/13 (went to waitlist)');
+  out.resItemsLeft = left.length; out.resTotal = Math.max(0, tot - oldUnit);
+  // 2) new public price (clear any lower Price Drop so $newPrice is what shows)
+  const ish = sh_(ITEMS_TAB), head = ish.getRange(1, 1, 1, ish.getLastColumn()).getDisplayValues()[0].map(x => String(x).trim());
+  let pc = head.indexOf('Initial Price'); if (pc < 0) pc = head.indexOf('Price');
+  if (pc < 0) return Object.assign(out, { ok: false, error: 'no price column' });
+  ish.getRange(it.row, pc + 1).setValue(newPrice);
+  const dc = head.indexOf('Price Drop'); if (dc >= 0 && it.drop != null) ish.getRange(it.row, dc + 1).setValue('');
+  out.price = newPrice;
+  // 3) hand it to the waitlist in order
+  const waiting = waitRows_().filter(w => w.row === it.row && w.status === 'Waiting').length;
+  release_([it.row]);
+  out.waitingBefore = waiting;
+  out.offered = waitRows_().filter(w => w.row === it.row && w.status === 'Offered').length;
   return out;
 }
 
