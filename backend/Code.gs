@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-12.4';
+const BACKEND_VERSION = '2026-11-13.1';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -55,7 +55,7 @@ function setup() {
     sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
     sh.setFrozenRows(1);
   };
-  ensure(COMMENTS_TAB, ['Time', 'ID', 'Item', 'Name', 'Text', 'Reply To', 'Owner', 'Hidden']);
+  ensure(COMMENTS_TAB, ['Time', 'ID', 'Item', 'Name', 'Text', 'Reply To', 'Owner', 'Hidden', 'Token', 'Edited']);
   ensure(RES_TAB, RES_HEAD);
   ensure(WAIT_TAB, WAIT_HEAD);
   const res = ss.getSheetByName(RES_TAB);
@@ -94,6 +94,8 @@ function doPost(e) {
       case 'comment': return json_(comment_(b));
       case 'reply': return json_(reply_(b));
       case 'hide': return json_(hide_(b));
+      case 'editComment': return json_(editComment_(b));
+      case 'deleteComment': return json_(deleteComment_(b));
       case 'reserve': return json_(reserve_(b));
       case 'cancel': return json_(cancel_(b));
       case 'waitlist': return json_(waitlist_(b));
@@ -183,26 +185,59 @@ function syncStatuses_() {
 function comments_() {
   const sh = sh_(COMMENTS_TAB);
   if (!sh || sh.getLastRow() < 2) return [];
-  return sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues()
+  // Columns: Time, ID, Item, Name, Text, Reply To, Owner, Hidden, Token (private, never returned), Edited
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 10).getValues()
     .filter(r => r[1] && r[7] !== true)
-    .map(r => ({ time: r[0] instanceof Date ? r[0].toISOString() : r[0], id: r[1], item: r[2], name: r[3], text: r[4], parent: r[5], owner: r[6] === true }));
+    .map(r => ({ time: r[0] instanceof Date ? r[0].toISOString() : r[0], id: r[1], item: r[2], name: r[3], text: r[4], parent: r[5], owner: r[6] === true,
+      edited: r[9] instanceof Date ? r[9].toISOString() : '' }));
 }
 
 function comment_(b) {
   const text = clean_(b.text, 600), item = clean_(b.item, 200), label = clean_(b.label, 200) || item;
   if (!text || !item) return { ok: false, error: 'empty' };
   const id = Utilities.getUuid().slice(0, 8), name = 'Guest ' + id.slice(0, 4).toUpperCase();
-  sh_(COMMENTS_TAB).appendRow([new Date(), id, item, name, text, '', false, false]);
+  const token = Utilities.getUuid().replace(/-/g, '');   // lets this (anonymous) author edit/delete later
+  sh_(COMMENTS_TAB).appendRow([new Date(), id, item, name, text, '', false, false, token, '']);
   MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] New question: ' + label,
     name + ' asked about "' + label + '":\n\n' + text + '\n\nReply in owner mode: ' + SITE_URL + '#owner');
-  return { ok: true };
+  return { ok: true, id: id, token: token };
 }
 
 function reply_(b) {
   if (!isOwner_(b.key)) return { ok: false, error: 'not owner' };
   const text = clean_(b.text, 1000);
   if (!text) return { ok: false, error: 'empty' };
-  sh_(COMMENTS_TAB).appendRow([new Date(), Utilities.getUuid().slice(0, 8), clean_(b.item, 200), 'Owner', text, clean_(b.parent, 20), true, false]);
+  const id = Utilities.getUuid().slice(0, 8);
+  sh_(COMMENTS_TAB).appendRow([new Date(), id, clean_(b.item, 200), 'Owner', text, clean_(b.parent, 20), true, false, '', '']);
+  return { ok: true, id: id };
+}
+
+// Edit/delete your own comment: anonymous authors prove it with the token they got when posting;
+// the owner (owner key) can edit their own replies and delete anything.
+function commentRow_(id) {
+  const sh = sh_(COMMENTS_TAB);
+  if (!id || sh.getLastRow() < 2) return null;
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, 10).getValues();
+  for (let i = 0; i < rows.length; i++) if (rows[i][1] === id) return { sh: sh, row: i + 2, owner: rows[i][6] === true, token: String(rows[i][8] || '') };
+  return null;
+}
+function mayChange_(c, b, forDelete) {
+  if (!c) return false;
+  if (isOwner_(b.key) && (c.owner || forDelete)) return true;
+  return !c.owner && !!c.token && b.token === c.token;
+}
+function editComment_(b) {
+  const c = commentRow_(clean_(b.id, 20)), text = clean_(b.text, c && c.owner ? 1000 : 600);
+  if (!mayChange_(c, b, false)) return { ok: false, error: 'not allowed' };
+  if (!text) return { ok: false, error: 'empty' };
+  c.sh.getRange(c.row, 5).setValue(text);
+  c.sh.getRange(c.row, 10).setValue(new Date());
+  return { ok: true };
+}
+function deleteComment_(b) {
+  const c = commentRow_(clean_(b.id, 20));
+  if (!mayChange_(c, b, true)) return { ok: false, error: 'not allowed' };
+  c.sh.getRange(c.row, 8).setValue(true);   // soft delete: hidden from the site, kept in the sheet
   return { ok: true };
 }
 

@@ -146,6 +146,10 @@
     .dphoto{min-height:0;max-height:58vh}.dphoto img{max-height:58vh}
     .dinfo{max-height:none;padding:18px}.dinfo h2{font-size:24px}.dinfo .price{font-size:28px}
   }
+  .q .you{color:var(--accent);font-size:11px}
+  .q .tools.confirm{align-items:center;font-size:12px;color:var(--sale)}
+  .edit-form{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .edit-form .row{display:flex;gap:6px}.edit-form .row button{flex:1;padding:8px}
   footer{color:var(--muted);font-size:12px;padding:24px 0 40px}
   @media (max-width:640px){
     header{padding-top:32px}.stats{gap:22px}
@@ -362,6 +366,9 @@ function fromCSV(text){
 /* ---------- state ---------- */
 const state = {cat:'All', q:'', sort:'cat', bag:new Set(), n:{}, day:null, time:null, openItem:null, claim:null, waitItem:null, cancelToken:null};
 let ownerKey = '';
+let myTok = {};   // comment id -> edit token for comments posted from this browser
+try{ myTok = JSON.parse(localStorage.getItem('mos-tok')||'{}'); }catch(e){}
+const saveTok = () => { try{ localStorage.setItem('mos-tok', JSON.stringify(myTok)); }catch(e){} };
 try{ JSON.parse(localStorage.getItem('mos-bag')||'[]').forEach(k=>state.bag.add(k)); ownerKey = localStorage.getItem('mos-owner')||''; }catch(e){}
 
 /* ---------- api ---------- */
@@ -516,14 +523,24 @@ function renderThread(){
   $('qTitle').textContent = it.name;
   const qs = comments.filter(c=>c.item===cKey(it) && !c.parent);
   const when = t => { try{ return new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }catch(e){ return ''; } };
-  const who = c => c.owner ? `<span class="owner-tag">Owner</span>` : esc(c.name);
+  const who = c => c.owner ? `<span class="owner-tag">Owner</span>` : esc(c.name) + (myTok[c.id] ? ' <span class="you">(you)</span>' : '');
+  const one = (c, isQ) => {
+    const mine = !!myTok[c.id] || (ownerKey && c.owner);
+    const canDel = mine || ownerKey;
+    const body = state.editing===c.id
+      ? `<form class="edit-form" data-id="${esc(c.id)}"><textarea required maxlength="${c.owner?1000:600}" rows="3">${esc(c.text)}</textarea>
+           <div class="row"><button class="primary" type="submit">Save</button><button class="ghost" type="button" data-cancel-edit>Cancel</button></div></form>`
+      : `<div class="txt">${esc(c.text)}</div>`;
+    const tools = state.confirmDel===c.id
+      ? `<div class="tools confirm">Delete this${isQ?' question':''}?<button class="hide" data-del-yes="${esc(c.id)}">Yes, delete</button><button data-del-no>Keep</button></div>`
+      : `<div class="tools">${isQ && ownerKey ? `<button data-reply="${esc(c.id)}">Reply as owner</button>` : ''}${mine && state.editing!==c.id ? `<button data-edit="${esc(c.id)}">Edit</button>` : ''}${canDel ? `<button class="hide" data-del="${esc(c.id)}">Delete</button>` : ''}</div>`;
+    return `<div class="who">${who(c)}<span>${when(c.time)}${c.edited?' · edited':''}</span></div>${body}${tools}`;
+  };
   $('thread').innerHTML = (qs.length ? qs.map(q=>{
     const ans = comments.filter(c=>c.parent===q.id);
-    return `<div class="q"><div class="who">${who(q)}<span>${when(q.time)}</span></div><div class="txt">${esc(q.text)}</div>
-      ${ans.map(a=>`<div class="ans"><div class="who">${who(a)}<span>${when(a.time)}</span></div><div class="txt">${esc(a.text)}</div>
-        ${ownerKey?`<div class="tools"><button class="hide" data-hide="${esc(a.id)}">Hide</button></div>`:''}</div>`).join('')}
-      ${ownerKey?`<div class="tools"><button data-reply="${esc(q.id)}">Reply as owner</button><button class="hide" data-hide="${esc(q.id)}">Hide</button></div>
-        <form class="reply-form" data-parent="${esc(q.id)}" hidden><textarea required maxlength="1000" rows="2" placeholder="Your answer"></textarea><button class="primary" type="submit">Post reply</button></form>`:''}
+    return `<div class="q">${one(q,true)}
+      ${ans.map(a=>`<div class="ans">${one(a,false)}</div>`).join('')}
+      ${ownerKey?`<form class="reply-form" data-parent="${esc(q.id)}" hidden><textarea required maxlength="1000" rows="2" placeholder="Your answer"></textarea><button class="primary" type="submit">Post reply</button></form>`:''}
     </div>`; }).join('') : '<p class="hint">No questions yet — be the first to ask.</p>');
   $('askForm').hidden = !CONFIG.apiUrl;
   if(!CONFIG.apiUrl) $('thread').insertAdjacentHTML('beforeend','<p class="hint">Questions open once the site is live.</p>');
@@ -581,7 +598,13 @@ document.addEventListener('click', e=>{
   const d=t.closest('[data-day]'); if(d){ state.day=d.dataset.day; state.time=null; renderBag(); return; }
   const tm=t.closest('[data-time]'); if(tm){ state.time=tm.dataset.time; renderBag(); return; }
   const rp=t.closest('[data-reply]'); if(rp){ const f=document.querySelector(`.reply-form[data-parent="${rp.dataset.reply}"]`); f.hidden=!f.hidden; return; }
-  const hd=t.closest('[data-hide]'); if(hd){ api({action:'hide', id:hd.dataset.hide, key:ownerKey}).then(()=>{ comments=comments.filter(c=>c.id!==hd.dataset.hide); renderThread(); render(); }); return; }
+  const ed=t.closest('[data-edit]'); if(ed){ state.editing=ed.dataset.edit; state.confirmDel=null; renderThread(); const ta=document.querySelector('.edit-form textarea'); if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } return; }
+  if(t.closest('[data-cancel-edit]')){ state.editing=null; renderThread(); return; }
+  const dl=t.closest('[data-del]'); if(dl){ state.confirmDel=dl.dataset.del; state.editing=null; renderThread(); return; }
+  if(t.closest('[data-del-no]')){ state.confirmDel=null; renderThread(); return; }
+  const dy=t.closest('[data-del-yes]'); if(dy){ const id=dy.dataset.delYes; dy.disabled=true;
+    api({action:'deleteComment', id, token:myTok[id]||'', key:ownerKey}).then(res=>{ if(res.ok){ comments=comments.filter(c=>c.id!==id && c.parent!==id); delete myTok[id]; saveTok(); }
+      state.confirmDel=null; renderThread(); render(); }).catch(()=>{ state.confirmDel=null; renderThread(); }); return; }
   if(t.closest('#bagBtn')) { renderBag(); $('drawer').classList.add('open'); }
   if(t.closest('[data-close]')) $('drawer').classList.remove('open');
   if(t.closest('[data-mclose]')) closeM();
@@ -633,11 +656,17 @@ $('copyCancel').addEventListener('click', async e=>{ const t=$('cancelLink'); tr
 $('askForm').addEventListener('submit', async e=>{
   e.preventDefault(); const f=e.target, it=items.find(i=>key(i)===state.openItem), btn=f.querySelector('[type=submit]'); btn.disabled=true; $('askErr').textContent='';
   try{ const res=await api({action:'comment', item:cKey(it), label:it.name, text:f.text.value, website:f.website.value});
-    if(res.ok){ f.reset(); await load(); renderThread(); } else $('askErr').textContent='Could not post. Please try again.';
+    if(res.ok){ if(res.id && res.token){ myTok[res.id]=res.token; saveTok(); } f.reset(); await load(); renderThread(); } else $('askErr').textContent='Could not post. Please try again.';
   }catch(err){ $('askErr').textContent='Could not reach the server.'; }
   btn.disabled=false;
 });
 $('thread').addEventListener('submit', async e=>{
+  if(e.target.matches('.edit-form')){ e.preventDefault(); const f=e.target, id=f.dataset.id, text=f.querySelector('textarea').value.trim(); if(!text) return;
+    f.querySelector('[type=submit]').disabled=true;
+    try{ const res=await api({action:'editComment', id, text, token:myTok[id]||'', key:ownerKey});
+      if(res.ok){ const c=comments.find(x=>x.id===id); if(c){ c.text=text; c.edited=new Date().toISOString(); } state.editing=null; renderThread(); }
+      else f.querySelector('[type=submit]').disabled=false; }catch(err){ f.querySelector('[type=submit]').disabled=false; }
+    return; }
   if(!e.target.matches('.reply-form')) return; e.preventDefault();
   const f=e.target, it=items.find(i=>key(i)===state.openItem);
   const res=await api({action:'reply', item:cKey(it), parent:f.dataset.parent, text:f.querySelector('textarea').value, key:ownerKey});
