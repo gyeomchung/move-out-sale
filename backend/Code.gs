@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-13.6';
+const BACKEND_VERSION = '2026-11-13.7';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -33,7 +33,7 @@ const RES_HEAD = ['Time', 'ID', 'Items', 'Total', 'Pickup Date', 'Pickup Time', 
 const WAIT_HEAD = ['Time', 'ID', 'Row', 'Item', 'Email', 'Status', 'Offered At', 'Token'];
 
 // Owner's notification email lives in the sheet (Settings!B1), not in this public code
-// Owner + extra people (Settings!B5) for reservation emails: new pickups and cancellations
+// Owner + extra people (Settings!B5) for reservation emails: new pickups, cancellations and waitlist activity
 function reservationEmails_() {
   let extra = '';
   try { extra = String(ss_().getSheetByName('Settings').getRange('B5').getValue()); } catch (e) {}
@@ -342,7 +342,7 @@ function waitlist_(b) {
   MailApp.sendEmail(email, "You're on the waitlist — " + it.name,
     "Thanks! You're #" + (ahead + 1) + ' on the waitlist for "' + it.name + '".\n\n' +
     "If it frees up, we'll email you a link to reserve it. You'll have " + HOLD_HOURS + ' hours to book before it goes to the next person.\n\n' + SITE_URL);
-  MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Waitlist: ' + it.name, email + ' joined the waitlist (#' + (ahead + 1) + ') for "' + it.name + '".');
+  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Waitlist: ' + it.name, email + ' joined the waitlist (#' + (ahead + 1) + ') for "' + it.name + '".');
   release_([it.row]);    // in case a unit is actually free right now
   return { ok: true, position: ahead + 1 };
 }
@@ -366,7 +366,7 @@ function release_(rows) {
         'Good news — "' + it.name + '" from the move-out sale is available, and we\'re holding it for you.\n\n' +
         'Pick a pickup time here within ' + HOLD_HOURS + ' hours:\n' + SITE_URL + '?claim=' + token + '\n\n' +
         "If you don't reserve by then, it will be offered to the next person on the waitlist.");
-      MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Offered to waitlist: ' + it.name,
+      MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Offered to waitlist: ' + it.name,
         '"' + it.name + '" was offered to ' + next.email + ' (holds for ' + HOLD_HOURS + 'h).');
     }
   });
