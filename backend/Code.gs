@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-12.2';
+const BACKEND_VERSION = '2026-11-12.3';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -33,6 +33,13 @@ const RES_HEAD = ['Time', 'ID', 'Items', 'Total', 'Pickup Date', 'Pickup Time', 
 const WAIT_HEAD = ['Time', 'ID', 'Row', 'Item', 'Email', 'Status', 'Offered At', 'Token'];
 
 // Owner's notification email lives in the sheet (Settings!B1), not in this public code
+// Owner + extra people (Settings!B5) for reservation emails: new pickups and cancellations
+function reservationEmails_() {
+  let extra = '';
+  try { extra = String(ss_().getSheetByName('Settings').getRange('B5').getValue()); } catch (e) {}
+  return [ownerEmail_()].concat(extra.split(/[,;\s]+/).filter(isEmail_)).join(',');
+}
+
 function ownerEmail_() {
   try { return String(ss_().getSheetByName('Settings').getRange('B1').getValue()).trim(); } catch (e) { return Session.getEffectiveUser().getEmail(); }
 }
@@ -91,6 +98,7 @@ function doPost(e) {
       case 'cancel': return json_(cancel_(b));
       case 'waitlist': return json_(waitlist_(b));
       case 'checkKey': return json_({ ok: isOwner_(b.key) });
+      case 'testNotify': return json_(testNotify_(b));
       default: return json_({ ok: false, error: 'unknown action' });
     }
   } finally { lock.releaseLock(); }
@@ -245,7 +253,7 @@ function reserve_(b) {
 
   const nice = niceDate_(date), list_ = lines.map(l => '• ' + l.name + (l.n > 1 ? ' × ' + l.n : '') + ' — $' + (l.unit * l.n)).join('\n');
   const cancelUrl = SITE_URL + '?cancel=' + token;
-  MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Pickup reserved — ' + nice + ' ' + time12_(time) + ' · ' + name,
+  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Pickup reserved — ' + nice + ' ' + time12_(time) + ' · ' + name,
     'Reservation #' + id + (claim ? ' (from waitlist)' : '') + '\n\nName: ' + name + '\nContact: ' + contact +
     '\nPickup: ' + nice + ' at ' + time12_(time) + '\n\nItems:\n' + list_ + '\nTotal: $' + total + (note ? '\n\nNote: ' + note : '') +
     '\n\nTo cancel: set Status to "Cancelled" in the Reservations tab, or open ' + cancelUrl);
@@ -272,7 +280,7 @@ function cancel_(b) {
   const sh = sh_(RES_TAB);
   sh.getRange(r.sheetRow, 10).setValue('Cancelled');
   sh.getRange(r.sheetRow, 12).setValue(true);
-  MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Reservation cancelled — ' + r.name,
+  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Reservation cancelled — ' + r.name,
     'Reservation #' + r.id + ' (' + niceDate_(r.date) + ' ' + time12_(r.time) + ') was cancelled by the buyer.\n\nItems:\n' +
     r.items.map(i => '• ' + i.name).join('\n') + '\n\nWaitlisted buyers (if any) are being notified automatically.');
   release_(r.items.map(i => i.row));
@@ -469,4 +477,14 @@ function icsFeed_(key) {
   });
   lines.push('END:VCALENDAR');
   return ContentService.createTextOutput(lines.join('\r\n') + '\r\n').setMimeType(ContentService.MimeType.ICAL);
+}
+
+// Owner-only: send a test reservation notification to everyone on the reservation list
+function testNotify_(b) {
+  if (!isOwner_(b.key)) return { ok: false, error: 'not owner' };
+  const to = reservationEmails_();
+  MailApp.sendEmail(to, '[Move-Out Sale] Test — reservation notifications are working',
+    'This is a test from the move-out sale site.\n\nFrom now on, every new pickup reservation and every cancellation is emailed to:\n' +
+    to.split(',').join('\n') + '\n\nNo action needed.');
+  return { ok: true, to: to.split(',').length };
 }
