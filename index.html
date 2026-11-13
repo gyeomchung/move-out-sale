@@ -275,7 +275,7 @@ const CONFIG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt/exec",   // Apps Script web app /exec URL (comments, reservations, live items)
   csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnPWGRf5-ZinHgZgKU3GJjm9m0k27HBGnBHgyOGz1F2deHZ30OMP1NMjnH_GJlM7mokOH3KjStApsv/pub?gid=1708984561&single=true&output=csv",
   firstDay: "2026-11-09", lastDay: "2026-12-03",
-  blockedDays: ["2026-11-20"],   // fallback; live list comes from the sheet (Settings!B4)
+  blockedDays: ["2026-11-17", "2026-11-20"],   // fallback; live list comes from the sheet (Settings!B4)
   catOrder: ["Furniture","Electronics","Kitchenware","Plants","Miscellaneous","Books"]
 };
 const embedded = JSON.parse(document.getElementById('data').textContent);
