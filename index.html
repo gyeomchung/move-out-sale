@@ -284,7 +284,7 @@
     <p class="hint" id="waitInfo"></p>
     <label>Your email<input name="email" type="email" required maxlength="120" autocomplete="email"></label>
     <input name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <p class="hint">If the reservation is cancelled, we'll email you a link and hold it for you for 24 hours.</p>
+    <p class="hint">If the reservation is cancelled, we'll email you a link and hold it for you for 3 hours.</p>
     <p class="err" id="waitErr"></p>
     <button class="primary" type="submit">Join waitlist</button>
     <button class="ghost" type="button" data-mclose>Cancel</button>
@@ -639,7 +639,7 @@ document.addEventListener('change', e=>{ const s=e.target.closest('[data-n]'); i
 $('waitForm').addEventListener('submit', async e=>{
   e.preventDefault(); const f=e.target, it=state.waitItem, btn=f.querySelector('[type=submit]'); btn.disabled=true; $('waitErr').textContent='';
   try{ const res=await api({action:'waitlist', row:it.row, name:it.name, email:f.email.value, website:f.website.value});
-    if(res.ok){ $('waitDoneText').textContent = res.already ? `You're already on the list for “${it.name}”.` : `You're #${res.position} for “${it.name}”. If it frees up, we'll email ${f.email.value} a link to reserve it — you'll have 24 hours to book.`;
+    if(res.ok){ $('waitDoneText').textContent = res.already ? `You're already on the list for “${it.name}”.` : `You're #${res.position} for “${it.name}”. If it frees up, we'll email ${f.email.value} a link to reserve it — you'll have 3 hours to book.`;
       f.reset(); $('waitForm').hidden=true; $('waitDone').hidden=false; load(); }
     else $('waitErr').textContent = res.error==='email' ? 'Please enter a valid email.' : 'Could not join the waitlist. Please try again.';
   }catch(err){ $('waitErr').textContent='Could not reach the server.'; }
@@ -696,7 +696,7 @@ async function handleParams(){
   if(p.get('claim')){
     try{ const d = await (await fetch(CONFIG.apiUrl+'?claim='+encodeURIComponent(p.get('claim')))).json();
       if(d.ok){ state.claim={token:p.get('claim'), row:d.row, name:d.name, expires:d.expires}; state.bag.add('r'+d.row); refresh(); $('drawer').classList.add('open'); }
-      else { $('cancelTitle').textContent='Hold not available'; $('cancelText').textContent = d.error==='expired' ? 'Sorry — the 24-hour hold on this item has ended and it moved to the next person.' : d.error==='claimed' ? 'This hold was already used to make a reservation.' : 'We could not find this hold.'; $('cancelYes').hidden=true; openM('cancelModal'); }
+      else { $('cancelTitle').textContent='Hold not available'; $('cancelText').textContent = d.error==='expired' ? 'Sorry — the hold on this item has ended and it moved to the next person.' : d.error==='claimed' ? 'This hold was already used to make a reservation.' : 'We could not find this hold.'; $('cancelYes').hidden=true; openM('cancelModal'); }
     }catch(e){}
   }
   if(p.get('cancel')){

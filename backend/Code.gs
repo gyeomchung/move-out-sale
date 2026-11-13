@@ -24,8 +24,10 @@ const SITE_URL = 'https://gyeomchung.github.io/move-out-sale/';
 const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
-const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-13.7';
+const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
+const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
+function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
+const BACKEND_VERSION = '2026-11-13.8';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -151,7 +153,7 @@ function waitRows_() {
 }
 
 const activeRes_ = r => !/cancel/i.test(r.status);
-const liveOffer_ = w => w.status === 'Offered' && w.offeredAt instanceof Date && (Date.now() - w.offeredAt.getTime()) < HOLD_HOURS * 3600e3;
+const liveOffer_ = w => w.status === 'Offered' && w.offeredAt instanceof Date && (Date.now() - w.offeredAt.getTime()) < holdHours_(w) * 3600e3;
 
 // Units still free for a row = qty − units in active reservations − units held by live waitlist offers
 function availability_(items, res, wait) {
@@ -380,7 +382,7 @@ function claimInfo_(token) {
   if (!liveOffer_(w)) return { ok: false, error: 'expired' };
   const { list } = itemRows_();
   const it = list.find(i => i.row === w.row);
-  return { ok: true, row: w.row, name: it ? it.name : w.name, expires: new Date(w.offeredAt.getTime() + HOLD_HOURS * 3600e3).toISOString() };
+  return { ok: true, row: w.row, name: it ? it.name : w.name, expires: new Date(w.offeredAt.getTime() + holdHours_(w) * 3600e3).toISOString(), hours: holdHours_(w) };
 }
 
 /* ======================= timer (every 10 min) ======================= */
@@ -401,7 +403,7 @@ function tick() {
       if (w.status === 'Offered' && !liveOffer_(w)) {
         ws.getRange(w.sheetRow, 6).setValue('Expired');
         MailApp.sendEmail(w.email, 'Your hold on "' + w.name + '" has expired',
-          'The ' + HOLD_HOURS + '-hour hold on "' + w.name + '" ended, so it has moved to the next person. Thanks for your interest!');
+          'The ' + holdHours_(w) + '-hour hold on "' + w.name + '" ended, so it has moved to the next person. Thanks for your interest!');
         rows.push(w.row);
       }
     });

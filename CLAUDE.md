@@ -20,7 +20,7 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
   - `Comments`, `Reservations`, `Waitlist` tabs are written by the backend.
 
 ## Rules
-- Reserved is computed: qty − active reservations − live waitlist holds (24h). Backend syncs Posted ⇄ Reserved.
+- Reserved is computed: qty − active reservations − live waitlist holds (3h; offers made before 2026-11-13 4:40pm ET keep 24h). Backend syncs Posted ⇄ Reserved.
 - Owner cancels by setting Reservations Status = Cancelled (processed by `tick` within 10 min).
 - Pickup slots: Nov 9 – Dec 3; weekdays 6:30–9:30pm starts, weekends 9am–9:30pm starts, 30-min steps, one booking per slot.
 
