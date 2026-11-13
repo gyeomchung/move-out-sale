@@ -1,0 +1,15 @@
+name: Peek items
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/peek.yml']
+jobs:
+  peek:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sleep 90
+          API=$(grep -o 'https://script.google.com/macros/s/[^"]*/exec' index.html | head -1)
+          curl -sSL "$API" > d.json; curl -sSL "$API" > d.json
+          node -e "const d=require('./d.json');console.log('v',d.v);(d.items||[]).filter(i=>/tent/i.test(i.name)).forEach(i=>console.log(JSON.stringify({name:i.name,status:i.status,avail:i.avail,qty:i.qty})))"

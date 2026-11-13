@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-13.3';
+const BACKEND_VERSION = '2026-11-13.4';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -79,6 +79,7 @@ function doGet(e) {
   if (p.claim) return json_(claimInfo_(p.claim));
   if (p.res) return json_(resInfo_(p.res));
   if (p.ics) return icsFeed_(p.ics);
+  runOwnerSeeds_();
   return json_({ v: BACKEND_VERSION, items: items_(), comments: comments_(), booked: booked_(), blocked: blockedDays_() });
 }
 
@@ -532,6 +533,37 @@ function testNotify_(b) {
 // Appears in the calendar feed and marks the items Reserved, like the hand-made OWNER rows.
 function ownerReserve_(b) {
   if (!isOwner_(b.key)) return { ok: false, error: 'not owner' };
+  return recordOwnerReserve_(b);
+}
+
+// One-shot offline deals Gyeom asked Claude to record (no owner key in the repo, so they run once inside the script).
+// Each runs at most once (Script Property SEED_<id>); an existing row with that ID counts as done.
+const OWNER_SEEDS = [
+  { id: 'OWNER3', match: /^outdoor\s+tent\s+bundle$/i, note: 'Arranged offline' }
+];
+function runOwnerSeeds_() {
+  const props = PropertiesService.getScriptProperties();
+  const todo = OWNER_SEEDS.filter(s => !props.getProperty('SEED_' + s.id));
+  if (!todo.length) return;
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return;
+  try {
+    const ids = resRows_().map(r => r.id), { list } = itemRows_();
+    todo.forEach(s => {
+      if (props.getProperty('SEED_' + s.id)) return;
+      let out;
+      if (ids.indexOf(s.id) >= 0) out = { ok: true, skipped: 'id exists' };
+      else {
+        const hits = list.filter(i => s.match.test(i.name));
+        out = hits.length === 1 ? recordOwnerReserve_({ id: s.id, items: [hits[0].name], note: s.note })
+                                : { ok: false, error: 'matched ' + hits.length + ' items' };
+      }
+      props.setProperty('SEED_' + s.id, JSON.stringify(out));
+    });
+  } catch (e) { /* never break the public feed */ } finally { lock.releaseLock(); }
+}
+
+function recordOwnerReserve_(b) {
   // Date/time are optional: a deal with no pickup set yet just holds the items (no calendar event until a date is added).
   const date = clean_(b.date, 10), time = clean_(b.time, 5);
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: 'bad date' };
