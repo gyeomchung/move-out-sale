@@ -120,6 +120,10 @@
   .add.wait{border-color:#b7791f;color:#8a5a12}
   .claim{background:#fff4d6;border:1px solid #e6c36a;color:#6b4a0c;border-radius:8px;padding:10px 12px;font-size:13px}
   .line select{margin-left:6px;border:1px solid var(--line);border-radius:6px;padding:2px 4px;font:12px Inter;background:var(--bg)}
+  .skel .thumb{background:linear-gradient(100deg,#ebe6dc 30%,#f5f1e9 50%,#ebe6dc 70%);background-size:300% 100%;animation:shimmer 1.2s infinite linear}
+  .skel-line{height:10px;border-radius:4px;background:#ebe6dc;margin:4px 0}.skel-line.short{width:40%}
+  .skel-t{color:transparent;background:#ebe6dc;border-radius:4px}
+  @keyframes shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
   footer{color:var(--muted);font-size:12px;padding:24px 0 40px}
   @media (max-width:640px){
     header{padding-top:32px}.stats{gap:22px}
@@ -338,13 +342,18 @@ async function api(body){
   const r = await fetch(CONFIG.apiUrl, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(body)});
   return r.json();
 }
+// Until live data arrives the list shows a loading skeleton (not the old embedded snapshot, which would flash
+// outdated items). The embedded snapshot is used only if both live sources fail.
+let ready = false;
+function timedFetch(url, ms){ const c = new AbortController(); const t = setTimeout(()=>c.abort(), ms); return fetch(url, {signal:c.signal}).finally(()=>clearTimeout(t)); }
 async function load(){
   if(CONFIG.apiUrl){
-    try{ const d = await (await fetch(CONFIG.apiUrl)).json();
+    try{ const d = await (await timedFetch(CONFIG.apiUrl, 12000)).json();
       if(d.items && d.items.length){ items=d.items; source='live'; }
-      comments=d.comments||[]; booked=new Set(d.booked||[]); if(Array.isArray(d.blocked)) CONFIG.blockedDays=d.blocked; refresh(); return; }catch(e){}
+      comments=d.comments||[]; booked=new Set(d.booked||[]); if(Array.isArray(d.blocked)) CONFIG.blockedDays=d.blocked; ready=true; refresh(); return; }catch(e){}
   }
-  try{ const t = await (await fetch(CONFIG.csvUrl)).text(); const live=fromCSV(t); if(live.length){ items=live; source='live'; refresh(); } }catch(e){}
+  try{ const t = await (await timedFetch(CONFIG.csvUrl, 8000)).text(); const live=fromCSV(t); if(live.length){ items=live; source='live'; } }catch(e){}
+  ready=true; refresh();
 }
 
 /* ---------- listing ---------- */
@@ -363,6 +372,11 @@ function visible(){
 function qCount(i){ return comments.filter(c=>c.item===cKey(i) && !c.parent && !c.owner).length; }
 
 function render(){
+  if(!ready){
+    $('stats').innerHTML = '<div class="stat"><b class="skel-t">00</b><span>Items available</span></div><div class="stat"><b class="skel-t">$0</b><span>Starting at</span></div>';
+    $('list').innerHTML = '<h2 class="group-title"><span class="skel-t">Loading</span></h2><div class="grid">' + '<div class="card skel"><div class="thumb"></div><div class="body"><div class="skel-line"></div><div class="skel-line short"></div></div></div>'.repeat(12) + '</div>';
+    return;
+  }
   const all = visible();
   const cats = CONFIG.catOrder.filter(c=>all.some(i=>i.category===c)).concat([...new Set(all.map(i=>i.category))].filter(c=>c && !CONFIG.catOrder.includes(c)));
   const avail_ = all.filter(i=>!isSold(i) && !isReserved(i));
