@@ -124,6 +124,28 @@
   .skel-line{height:10px;border-radius:4px;background:#ebe6dc;margin:4px 0}.skel-line.short{width:40%}
   .skel-t{color:transparent;background:#ebe6dc;border-radius:4px}
   @keyframes shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+  .card[data-open]{cursor:pointer}
+  .modal .box.detail{width:min(860px,100%);padding:0;display:grid;grid-template-columns:1.1fr 1fr;gap:0;overflow:hidden}
+  .detail .x{position:absolute;right:10px;top:8px;z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.85);font-size:22px;line-height:1;cursor:pointer;color:var(--ink)}
+  .dphoto{position:relative;min-height:320px;display:flex;align-items:center;justify-content:center}
+  .dphoto img{width:100%;height:100%;max-height:80vh;object-fit:contain;display:block}
+  .dphoto .mono{font-family:"Instrument Serif",serif;font-size:120px;opacity:.35}
+  .dinfo{padding:26px;display:flex;flex-direction:column;gap:12px;overflow:auto;max-height:80vh}
+  .dinfo h2{font-family:"Instrument Serif",serif;font-weight:400;font-size:30px;line-height:1.1}
+  .dinfo .price{font-size:34px}.dinfo .price-row{margin-top:0;padding-top:0}
+  .dmeta{display:flex;gap:6px;flex-wrap:wrap}.dmeta .pill{font-size:12px;padding:3px 10px}
+  .pill-resv{border-color:#b7791f;color:#8a5a12}
+  .dlinks a{font-size:13px;color:var(--muted);margin-right:10px}
+  .dbtns{display:flex;flex-direction:column;gap:8px;margin-top:auto}
+  .detail .dbtn{width:100%;border-radius:999px;border:0;padding:13px;font:600 14px Inter;color:#fff;background:var(--ink)}
+  .detail .dbtn.on{background:var(--accent)}
+  .detail .dbtn.wait{background:#b7791f;color:#fff}
+  .detail .ghost{padding:11px;font-size:14px}
+  @media (max-width:640px){
+    .modal .box.detail{grid-template-columns:1fr;max-height:92vh;overflow:auto}
+    .dphoto{min-height:0;max-height:58vh}.dphoto img{max-height:58vh}
+    .dinfo{max-height:none;padding:18px}.dinfo h2{font-size:24px}.dinfo .price{font-size:28px}
+  }
   footer{color:var(--muted);font-size:12px;padding:24px 0 40px}
   @media (max-width:640px){
     header{padding-top:32px}.stats{gap:22px}
@@ -204,6 +226,11 @@
     </div>
     <button class="ghost" data-close>Keep browsing</button>
   </div>
+</div>
+
+<div class="modal" id="detailModal" role="dialog" aria-label="Item details">
+  <div class="scrim" data-mclose></div>
+  <div class="box detail" id="detailBox"></div>
 </div>
 
 <div class="modal" id="contactModal" role="dialog" aria-label="Your contact">
@@ -413,7 +440,7 @@ function card(i){
   const resv = isReserved(i), claimed = state.claim && state.claim.row===i.row;
   const label = sold?'Sold':(resv?'Reserved':(dropped?'Price drop':''));
   const links = i.links.map((u,n)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${i.links.length>1?'Item '+(n+1):'Original listing'} ↗</a>`).join('');
-  return `<article class="card${sold?' sold':''}${resv?' reserved':''}">
+  return `<article class="card${sold?' sold':''}${resv?' reserved':''}" data-open="${esc(k)}" tabindex="0" role="button" aria-label="View ${esc(i.name)}">
     <div class="thumb${i.photo?' has-photo':''}" style="background:${bg}">
       ${i.photo?`<img src="${esc(photoUrl(i.photo))}" data-drive="${esc(driveId(i.photo)||'')}" onerror="photoFallback(this)" alt="${esc(i.name)}" loading="lazy" referrerpolicy="no-referrer">`:`<div class="mono">${esc(i.name.replace(/^ikea\s+/i,'')[0]||'')}</div>`}
       ${label?`<span class="tag">${label}</span>`:''}
@@ -502,6 +529,41 @@ function renderThread(){
   if(!CONFIG.apiUrl) $('thread').insertAdjacentHTML('beforeend','<p class="hint">Questions open once the site is live.</p>');
 }
 
+/* ---------- item detail popup ---------- */
+function renderDetail(){
+  const i = items.find(x=>key(x)===state.detail); if(!i) return;
+  const sold=isSold(i), resv=isReserved(i), p=now(i), k=key(i), dropped=p<i.price, claimed=state.claim && state.claim.row===i.row;
+  const off = i.original ? Math.round((1-p/i.original)*100) : null;
+  const status = sold ? 'Sold' : resv ? 'Reserved' : (i.qty>1 ? `${avail(i)} of ${i.qty} left` : 'Available');
+  const links = i.links.map((u,n)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${i.links.length>1?'Original listing '+(n+1):'Original listing'} ↗</a>`).join('');
+  const bg = `var(--${(i.category||'misc').toLowerCase()}, #e8e4dc)`;
+  $('detailBox').innerHTML = `
+    <button class="x" data-mclose aria-label="Close">×</button>
+    <div class="dphoto" style="background:${bg}">${i.photo
+      ? `<img src="${esc(photoUrl(i.photo))}" data-drive="${esc(driveId(i.photo)||'')}" onerror="photoFallback(this)" alt="${esc(i.name)}" referrerpolicy="no-referrer">`
+      : `<div class="mono">${esc(i.name.replace(/^ikea\s+/i,'')[0]||'')}</div>`}</div>
+    <div class="dinfo">
+      <p class="eyebrow">${esc(i.category)}${i.sub?' · '+esc(i.sub):''}</p>
+      <h2>${esc(i.name)}</h2>
+      <div class="price-row"><span class="price">${fmt(p)}</span>
+        ${dropped?`<span class="was">${fmt(i.price)}</span>`:''}
+        ${i.original?`<span class="was">${fmt(i.original)} new</span>`:''}
+        ${off>0?`<span class="off">−${off}%</span>`:''}</div>
+      <div class="dmeta">
+        <span class="pill ${sold?'':resv?'pill-resv':'cond-like-new'}">${status}</span>
+        ${i.condition?`<span class="pill">${esc(i.condition)}</span>`:''}
+        ${i.qty>1?`<span class="pill">price each</span>`:''}
+        ${resv && i.waiting?`<span class="pill">${i.waiting} on waitlist</span>`:''}
+      </div>
+      ${links?`<div class="dlinks">${links}</div>`:''}
+      <div class="dbtns">
+        ${sold ? '' : resv && !claimed ? `<button class="primary dbtn wait" data-wait="${esc(k)}">Join waitlist</button>`
+          : `<button class="primary dbtn add${state.bag.has(k)?' on':''}" data-key="${esc(k)}">${state.bag.has(k)?'✓ Added to your list':'+ Add to your list'}</button>`}
+        <button class="ghost" data-ask="${esc(k)}">Ask a question${qCount(i)?' ('+qCount(i)+')':''}</button>
+      </div>
+    </div>`;
+}
+
 /* ---------- modals ---------- */
 const openM = id => $(id).classList.add('open');
 const closeM = () => document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));
@@ -509,11 +571,12 @@ const closeM = () => document.querySelectorAll('.modal.open').forEach(m=>m.class
 document.addEventListener('click', e=>{
   const t=e.target;
   const c=t.closest('.chip'); if(c){ state.cat=c.dataset.cat; render(); const m=document.querySelector('main'); if(window.scrollY>m.offsetTop) window.scrollTo({top:m.offsetTop-60}); return; }
-  const a=t.closest('.add[data-key]'); if(a){ const k=a.dataset.key; state.bag.has(k)?state.bag.delete(k):state.bag.add(k); render(); renderBag(); return; }
+  const a=t.closest('.add[data-key]'); if(a){ const k=a.dataset.key; state.bag.has(k)?state.bag.delete(k):state.bag.add(k); render(); renderBag(); if($('detailModal').classList.contains('open')) renderDetail(); return; }
   const w=t.closest('[data-wait]'); if(w){ const it=items.find(i=>key(i)===w.dataset.wait); state.waitItem=it; $('waitTitle').textContent=it.name;
     $('waitInfo').textContent = it.waiting ? `${it.waiting} ${it.waiting>1?'people are':'person is'} ahead of you.` : 'You would be first in line.';
     $('waitForm').hidden=false; $('waitDone').hidden=true; $('waitErr').textContent=''; openM('waitModal'); return; }
   const q=t.closest('[data-ask]'); if(q){ state.openItem=q.dataset.ask; renderThread(); openM('itemModal'); return; }
+  const cd=t.closest('article.card[data-open]'); if(cd && !t.closest('a,button,select')){ state.detail=cd.dataset.open; renderDetail(); openM('detailModal'); return; }
   const r=t.closest('[data-remove]'); if(r){ state.bag.delete(r.dataset.key); render(); renderBag(); return; }
   const d=t.closest('[data-day]'); if(d){ state.day=d.dataset.day; state.time=null; renderBag(); return; }
   const tm=t.closest('[data-time]'); if(tm){ state.time=tm.dataset.time; renderBag(); return; }
@@ -594,9 +657,9 @@ function onHash(){ if(location.hash==='#owner' && !ownerKey && CONFIG.apiUrl) op
 $('q').addEventListener('input', e=>{ state.q=e.target.value.trim().toLowerCase(); render(); });
 $('sort').addEventListener('change', e=>{ state.sort=e.target.value; render(); });
 window.addEventListener('hashchange', onHash);
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeM(); $('drawer').classList.remove('open'); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.matches && e.target.matches('article.card[data-open]')){ state.detail=e.target.dataset.open; renderDetail(); openM('detailModal'); return; } if(e.key==='Escape'){ closeM(); $('drawer').classList.remove('open'); } });
 
-function refresh(){ render(); renderBag(); if($('itemModal').classList.contains('open')) renderThread();
+function refresh(){ render(); renderBag(); if($('detailModal').classList.contains('open')) renderDetail(); if($('itemModal').classList.contains('open')) renderThread();
   $('updated').textContent = (source==='live'?'Live from the sale sheet':'Last updated '+updatedAt) + ' · Prices are per item.'; }
 async function handleParams(){
   const p = new URLSearchParams(location.search);
