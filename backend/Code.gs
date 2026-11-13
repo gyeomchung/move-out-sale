@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-13.4';
+const BACKEND_VERSION = '2026-11-13.5';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -79,8 +79,8 @@ function doGet(e) {
   if (p.claim) return json_(claimInfo_(p.claim));
   if (p.res) return json_(resInfo_(p.res));
   if (p.ics) return icsFeed_(p.ics);
-  runOwnerSeeds_();
-  return json_({ v: BACKEND_VERSION, items: items_(), comments: comments_(), booked: booked_(), blocked: blockedDays_() });
+  runOwnerSeeds_(); runOwnerOps_();
+  return json_({ ops: opResults_(), v: BACKEND_VERSION, items: items_(), comments: comments_(), booked: booked_(), blocked: blockedDays_() });
 }
 
 function doPost(e) {
@@ -503,14 +503,16 @@ function icsFeed_(key) {
   const now = utc(new Date());
   resRows_().filter(activeRes_).forEach(r => {
     if (!r.date) return;   // offline deal with no pickup date yet
+    const allDay = !r.time;   // date set, time not yet → all-day event
     let start;
-    try { start = Utilities.parseDate(r.date + ' ' + r.time, TZ, 'yyyy-MM-dd HH:mm'); } catch (e) { return; }
+    try { start = Utilities.parseDate(r.date + ' ' + (r.time || '12:00'), TZ, 'yyyy-MM-dd HH:mm'); } catch (e) { return; }
     const end = new Date(start.getTime() + 30 * 60e3);
     const what = r.items.map(i => i.name + (i.n > 1 ? ' × ' + i.n : '')).join(', ');
     const picked = /picked/i.test(r.status) ? '✓ ' : '';
     const desc = 'Reservation #' + r.id + ' (' + r.status + ')\nBuyer: ' + r.name + '\nContact: ' + r.contact +
       '\nItems:\n' + r.items.map(i => '• ' + i.name + (i.n > 1 ? ' × ' + i.n : '')).join('\n') + (r.note ? '\nNote: ' + r.note : '');
-    lines.push('BEGIN:VEVENT', 'UID:res-' + r.id + '@move-out-sale', 'DTSTAMP:' + now, 'DTSTART:' + utc(start), 'DTEND:' + utc(end),
+    lines.push('BEGIN:VEVENT', 'UID:res-' + r.id + '@move-out-sale', 'DTSTAMP:' + now, allDay ? 'DTSTART;VALUE=DATE:' + r.date.replace(/-/g, '') : 'DTSTART:' + utc(start),
+      allDay ? 'DTEND;VALUE=DATE:' + Utilities.formatDate(new Date(start.getTime() + 864e5), TZ, 'yyyyMMdd') : 'DTEND:' + utc(end),
       fold('SUMMARY:' + esc(picked + '픽업: ' + r.name + ' — ' + what)), fold('DESCRIPTION:' + esc(desc)),
       'LOCATION:Downtown Brooklyn (home)', 'STATUS:CONFIRMED',
       'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc('Pickup: ' + r.name), 'TRIGGER:-PT60M', 'END:VALARM', 'END:VEVENT');
@@ -561,6 +563,78 @@ function runOwnerSeeds_() {
       props.setProperty('SEED_' + s.id, JSON.stringify(out));
     });
   } catch (e) { /* never break the public feed */ } finally { lock.releaseLock(); }
+}
+
+// One-shot sheet edits Gyeom asks Claude for in chat (Gyeom doesn't edit the sheet). Each runs once (Script Property
+// OP_<id>); its result — IDs and counts only, never names or contacts — is returned publicly as `ops` by doGet.
+const OWNER_OPS = [
+  // 2026-11-13: today's buyer didn't show for Monstera Cathy Mint → move it to Bonnie's Sunday (11/15) pickup
+  { id: 'OP1', run: () => moveItem_(/monstera.*cathy.*mint/i, '2026-11-13', /bonnie/i, 'Bonnie', '2026-11-15', 'No-show 11/13') }
+];
+function runOwnerOps_() {
+  const props = PropertiesService.getScriptProperties();
+  const todo = OWNER_OPS.filter(o => !props.getProperty('OP_' + o.id));
+  if (!todo.length) return;
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return;
+  try {
+    todo.forEach(o => {
+      if (props.getProperty('OP_' + o.id)) return;
+      let out; try { out = o.run(); } catch (e) { out = { ok: false, error: String(e && e.message || e).slice(0, 200) }; }
+      props.setProperty('OP_' + o.id, JSON.stringify(out));
+    });
+  } finally { lock.releaseLock(); }
+}
+function opResults_() {
+  const props = PropertiesService.getScriptProperties(), out = {};
+  OWNER_OPS.forEach(o => { const v = props.getProperty('OP_' + o.id); if (v) try { out[o.id] = JSON.parse(v); } catch (e) {} });
+  return out;
+}
+function unitPrice_(it) { return (it.drop != null && it.drop > 0 && it.drop < it.price) ? it.drop : it.price; }
+const lineStr_ = i => i.row + '|' + i.n + '|' + i.name;
+
+// Move one item from a no-show reservation (on fromDate) to the buyer matching toName on toDate.
+// Adds to the receiver first so the unit is never free in between (no waitlist offer). No buyer emails are sent.
+function moveItem_(itemRe, fromDate, toRe, toLabel, toDate, note) {
+  const { list } = itemRows_();
+  const hits = list.filter(i => itemRe.test(i.name));
+  if (hits.length !== 1) return { ok: false, error: 'item matched ' + hits.length };
+  const it = hits[0], unit = unitPrice_(it);
+  const live = resRows_().filter(r => activeRes_(r) && !/picked/i.test(r.status));
+  const from = live.filter(r => r.date === fromDate && !toRe.test(r.name) && r.items.some(i => i.row === it.row));
+  if (from.length !== 1) return { ok: false, error: 'no-show reservation matched ' + from.length };
+  const toAll = live.filter(r => toRe.test(r.name));
+  const to = toAll.filter(r => r.date === toDate);
+  if (to.length > 1) return { ok: false, error: 'receiver matched ' + to.length };
+  const sh = sh_(RES_TAB), out = { ok: true, item: it.name, from: from[0].id };
+  if (to.length === 1) {
+    const r = to[0];
+    if (!r.items.some(i => i.row === it.row)) {
+      sh.getRange(r.sheetRow, 3).setValue(r.items.concat([{ row: it.row, n: 1, name: it.name }]).map(lineStr_).join('\n'));
+      const tot = parseFloat(String(sh.getRange(r.sheetRow, 4).getValue()).replace(/[$,]/g, '')) || 0;
+      sh.getRange(r.sheetRow, 4).setValue(tot + unit);
+    }
+    out.to = r.id; out.toTime = r.time || ''; out.toItems = r.items.length + 1;
+  } else {
+    const made = recordOwnerReserve_({ items: [it.name], name: toLabel, date: toDate, note: 'Moved from no-show' });
+    if (!made.ok) return made;
+    out.to = made.id; out.created = true; out.toTime = ''; out.receiverOtherDates = toAll.length;
+  }
+  const f = from[0], left = f.items.filter(i => i.row !== it.row);
+  const fNote = sh.getRange(f.sheetRow, 9).getValue();
+  sh.getRange(f.sheetRow, 9).setValue((fNote ? fNote + ' · ' : '') + note + ': ' + it.name + ' moved');
+  if (left.length) {
+    sh.getRange(f.sheetRow, 3).setValue(left.map(lineStr_).join('\n'));
+    const tot = parseFloat(String(sh.getRange(f.sheetRow, 4).getValue()).replace(/[$,]/g, '')) || 0;
+    sh.getRange(f.sheetRow, 4).setValue(Math.max(0, tot - unit));
+    out.fromItemsLeft = left.length;
+  } else {
+    sh.getRange(f.sheetRow, 10).setValue('Cancelled');
+    sh.getRange(f.sheetRow, 12).setValue(true);
+    out.fromCancelled = true;
+  }
+  syncStatuses_();
+  return out;
 }
 
 function recordOwnerReserve_(b) {

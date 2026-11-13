@@ -1,6 +1,8 @@
 name: Peek items
 on:
   workflow_dispatch:
+    inputs:
+      q: { description: 'item name regex', default: '.' }
 jobs:
   peek:
     runs-on: ubuntu-latest
@@ -8,6 +10,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: |
           sleep 5
+          export Q='${{ inputs.q }}'
           API=$(grep -o 'https://script.google.com/macros/s/[^"]*/exec' index.html | head -1)
           curl -sSL "$API" > d.json; curl -sSL "$API" > d.json
-          node -e "const d=require('./d.json');console.log('v',d.v);(d.items||[]).filter(i=>/tent/i.test(i.name)).forEach(i=>console.log(JSON.stringify({name:i.name,status:i.status,avail:i.avail,qty:i.qty})))"
+          node -e "const d=require('./d.json');console.log('v',d.v,'ops',JSON.stringify(d.ops));(d.items||[]).filter(i=>new RegExp(process.env.Q||'.','i').test(i.name)).forEach(i=>console.log(JSON.stringify({name:i.name,status:i.status,avail:i.avail,qty:i.qty})))"

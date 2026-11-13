@@ -36,3 +36,10 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
 - Reservation/cancellation emails also go to the addresses in Settings!B5 (`reservationEmails_`).
 - Blocked pickup days: sheet Settings!B4 (comma-separated YYYY-MM-DD, store as text). Backend rejects them and
   returns them as `blocked`; the site hides those days.
+
+## Owner changes without touching the sheet
+- Gyeom does NOT open the sheet — Claude makes every data change. Claude has no sheet/owner-key access from its
+  sandbox, so changes ship as one-shot ops in `backend/Code.gs` (`OWNER_OPS`, plus older `OWNER_SEEDS`): each runs once
+  on the next `doGet` after deploy (Script Property `OP_<id>`), and its result (IDs/counts only, no names) is returned
+  as `ops` in the public GET. Add a new op with the next id; never reuse or edit an id that already ran.
+- Verify with the `Peek items` GitHub Action (`gh workflow run "Peek items"`), which prints `ops` and matching items.
