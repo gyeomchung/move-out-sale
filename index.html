@@ -140,7 +140,7 @@
   <div class="wrap">
     <div class="eyebrow">Downtown Brooklyn · 1 min from Hoyt–Schermerhorn station · Pickup only <span id="ownerBadge" class="owner-badge" hidden>Owner mode</span></div>
     <h1>Move-Out <em>Sale</em></h1>
-    <p class="lede">Our plant collection is up first — rare monsteras, anthuriums and ferns, well cared for and priced to go. Furniture and home goods are coming soon. Add what you like to your list, ask questions on any item, and book a pickup time — all right here.</p>
+    <p class="lede">Rare monsteras, anthuriums and ferns, plus kitchenware, furniture and electronics from our apartment — well cared for and priced to go. More items are added as we pack.</p>
     <div class="stats" id="stats"></div>
     <div class="banner" id="banner"></div>
   </div>
@@ -276,7 +276,7 @@ const CONFIG = {
   csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnPWGRf5-ZinHgZgKU3GJjm9m0k27HBGnBHgyOGz1F2deHZ30OMP1NMjnH_GJlM7mokOH3KjStApsv/pub?gid=1708984561&single=true&output=csv",
   firstDay: "2026-11-09", lastDay: "2026-12-03",
   blockedDays: ["2026-11-17", "2026-11-20"],   // fallback; live list comes from the sheet (Settings!B4)
-  catOrder: ["Furniture","Electronics","Kitchenware","Plants","Miscellaneous","Books"]
+  catOrder: ["Plants","Furniture","Kitchenware","Electronics","Miscellaneous","Books"]
 };
 const embedded = JSON.parse(document.getElementById('data').textContent);
 let items = embedded.items, updatedAt = embedded.updated, comments = [], booked = new Set(), source = 'embedded';
@@ -367,9 +367,12 @@ function render(){
   const out=$('list');
   if(!list.length){ out.innerHTML='<div class="empty">Nothing matches that yet.</div>'; return; }
   if(state.sort==='cat'){
-    out.innerHTML = cats.filter(c=>list.some(i=>i.category===c)).map(c=>{
-      const g=list.filter(i=>i.category===c).sort(soldLast);
-      return `<h2 class="group-title">${esc(c)}<small>${g.length} items</small></h2><div class="grid">${g.map(card).join('')}</div>`;}).join('');
+    // Sold items leave their category and collect in one "Sold" section at the very bottom
+    const live=list.filter(i=>!isSold(i)), gone=list.filter(isSold);
+    out.innerHTML = cats.filter(c=>live.some(i=>i.category===c)).map(c=>{
+      const g=live.filter(i=>i.category===c).sort(soldLast);
+      return `<h2 class="group-title">${esc(c)}<small>${g.length} items</small></h2><div class="grid">${g.map(card).join('')}</div>`;}).join('')
+      + (gone.length ? `<h2 class="group-title">Sold<small>${gone.length} ${gone.length>1?'items':'item'} · thank you!</small></h2><div class="grid">${gone.map(card).join('')}</div>` : '');
   } else {
     const f={low:(a,b)=>now(a)-now(b),high:(a,b)=>now(b)-now(a),off:(a,b)=>((b.original?1-now(b)/b.original:0)-(a.original?1-now(a)/a.original:0))}[state.sort];
     out.innerHTML = `<div class="grid">${list.sort((a,b)=>soldLast(a,b)||f(a,b)).map(card).join('')}</div>`;
