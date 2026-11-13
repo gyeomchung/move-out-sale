@@ -349,10 +349,10 @@ function parseCSV(t){
   r.push(f);rows.push(r);return rows;
 }
 function fromCSV(text){
-  const rows=parseCSV(text), h=rows[0].map(s=>s.trim()), col=n=>h.indexOf(n);
+  const rows=parseCSV(text), h=rows[0].map(s=>s.trim()), col=(...ns)=>{ for(const n of ns){ const i=h.indexOf(n); if(i>=0) return i; } return -1; };
   return rows.slice(1).map(r=>({
     category:r[col('Category')]||'', sub:r[col('Subcategory')]||'', name:(r[col('Item')]||'').trim(),
-    price:money(r[col('Price')]), qty:parseInt(r[col('QTY')])||1, drop:money(r[col('Price Drop')]),
+    price:money(r[col('Initial Price','Price')]), qty:parseInt(r[col('QTY')])||1, drop:col('Price Drop')>=0?money(r[col('Price Drop')]):null,
     condition:r[col('Condition')]||'', original:money(r[col('Original Price + Tax')]),
     links:(r[col('Original Item Link')]||'').split(/\s+/).map(s=>s.replace(/^-/,'')).filter(s=>/^https?:/.test(s)),
     status:(r[col('Status')]||'').trim(), photo:col('Photo')>=0 ? (r[col('Photo')]||'').trim() : ''

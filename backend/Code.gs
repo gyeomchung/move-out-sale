@@ -25,7 +25,7 @@ const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
 const HOLD_HOURS = 24;
-const BACKEND_VERSION = '2026-11-12.3';
+const BACKEND_VERSION = '2026-11-12.4';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -108,12 +108,14 @@ function doPost(e) {
 
 function itemRows_() {
   const v = sh_(ITEMS_TAB).getDataRange().getDisplayValues();
-  const h = v[0].map(s => String(s).trim()), c = n => h.indexOf(n);
+  const h = v[0].map(s => String(s).trim());
+  const c = (...names) => { for (const n of names) { const i = h.indexOf(n); if (i >= 0) return i; } return -1; };   // header names, first match wins
   const money = s => { const n = parseFloat(String(s).replace(/[$,\s]/g, '')); return isFinite(n) ? n : null; };
   return { statusCol: c('Status') + 1, list: v.slice(1).map((r, i) => ({
     row: i + 2,
     category: r[c('Category')], sub: r[c('Subcategory')], name: String(r[c('Item')]).trim(),
-    price: money(r[c('Price')]), qty: parseInt(r[c('QTY')], 10) || 1, drop: money(r[c('Price Drop')]),
+    // 'Final Price' is the private negotiated sale price — never shown on the site. Only an explicit 'Price Drop' column lowers the public price.
+    price: money(r[c('Initial Price', 'Price')]), qty: parseInt(r[c('QTY')], 10) || 1, drop: c('Price Drop') >= 0 ? money(r[c('Price Drop')]) : null,
     condition: r[c('Condition')], original: money(r[c('Original Price + Tax')]),
     links: String(r[c('Original Item Link')] || '').split(/\s+/).map(s => s.replace(/^-/, '')).filter(s => /^https?:/.test(s)),
     status: String(r[c('Status')] || '').trim(),

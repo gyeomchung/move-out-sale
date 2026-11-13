@@ -15,6 +15,8 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
   Never break `selfUpdate_` / `doGet` — a broken updater can't fix itself. Always `node --check` before pushing.
 - Google Sheet `1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk`
   - `Move Out Sale` tab: items. Status dropdown: Posted / Reserved / Sold / On Hold. Column M = Photo (Drive link).
+    Public price = "Initial Price" (older name "Price"). "Final Price" = private negotiated sale price, never shown.
+    Columns are found by header name — if Gyeom renames a header, update the lookups in Code.gs and index.html.
   - `Comments`, `Reservations`, `Waitlist` tabs are written by the backend.
 
 ## Rules
