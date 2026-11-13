@@ -1,0 +1,16 @@
+name: List Drive photo folder
+# Prints "name<TAB>fileId" for every file in the shared photo folder (used to link new photos in the sheet).
+on:
+  workflow_dispatch:
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sSL "https://drive.google.com/embeddedfolderview?id=1n_lZURm6EfxWuYXxuIXG3RjWqkEelECF#list" -o f.html
+          python3 - << 'PY'
+          import re, html
+          s = open('f.html', encoding='utf-8').read()
+          for fid, name in re.findall(r'href="https://drive\.google\.com/file/d/([\w-]+)/view[^"]*".*?class="flip-entry-title">([^<]+)<', s, re.S):
+              print(f"{html.unescape(name)}\t{fid}")
+          PY
