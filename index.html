@@ -647,6 +647,13 @@ $('waitForm').addEventListener('submit', async e=>{
 });
 $('cancelYes').addEventListener('click', async e=>{
   e.target.disabled=true;
+  if(state.passToken){
+    try{ const res=await api({action:'pass', token:state.passToken});
+      $('cancelText').textContent = res.ok ? 'Got it — thanks for letting us know! It will go to the next person on the waitlist.' : res.error==='claimed' ? 'You already reserved this item.' : 'This hold has already ended.';
+      $('cancelYes').hidden=true; state.passToken=null; history.replaceState(null,'',location.pathname); load();
+    }catch(err){ $('cancelText').textContent='Could not reach the server. Please try again.'; e.target.disabled=false; }
+    return;
+  }
   try{ const res=await api({action:'cancel', token:state.cancelToken});
     $('cancelText').textContent = res.ok ? 'Your reservation is cancelled. Thanks for letting us know!' : (res.error==='picked up' ? 'This reservation was already picked up.' : 'We could not find that reservation.');
     $('cancelYes').hidden=true; history.replaceState(null,'',location.pathname); load();
@@ -699,10 +706,19 @@ async function handleParams(){
       else { $('cancelTitle').textContent='Hold not available'; $('cancelText').textContent = d.error==='expired' ? 'Sorry — the hold on this item has ended and it moved to the next person.' : d.error==='claimed' ? 'This hold was already used to make a reservation.' : 'We could not find this hold.'; $('cancelYes').hidden=true; openM('cancelModal'); }
     }catch(e){}
   }
+  if(p.get('pass')){
+    state.passToken=p.get('pass');
+    try{ const d = await (await fetch(CONFIG.apiUrl+'?claim='+encodeURIComponent(state.passToken))).json();
+      $('cancelTitle').textContent='Pass on this item?';
+      if(d.ok){ $('cancelText').textContent=`“${d.name}” will go to the next person on the waitlist. Changed your mind? Just close this and pick a pickup time instead.`; $('cancelYes').textContent='Yes, pass'; $('cancelYes').hidden=false; }
+      else { $('cancelText').textContent = d.error==='claimed' ? 'You already reserved this item.' : 'This hold has already ended.'; $('cancelYes').hidden=true; state.passToken=null; }
+      openM('cancelModal');
+    }catch(e){}
+  }
   if(p.get('cancel')){
     state.cancelToken=p.get('cancel');
     try{ const d = await (await fetch(CONFIG.apiUrl+'?res='+encodeURIComponent(state.cancelToken))).json();
-      $('cancelTitle').textContent='Cancel reservation?';
+      $('cancelTitle').textContent='Cancel reservation?'; $('cancelYes').textContent='Yes, cancel it';
       if(d.ok && !/cancel/i.test(d.status)){ $('cancelText').textContent=`#${d.id} · ${d.date} at ${d.time} · ${d.items.join(', ')}`; $('cancelYes').hidden=false; }
       else { $('cancelText').textContent = d.ok ? 'This reservation is already cancelled.' : 'We could not find that reservation.'; $('cancelYes').hidden=true; }
       openM('cancelModal');

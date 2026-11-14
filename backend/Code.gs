@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.3';
+const BACKEND_VERSION = '2026-11-14.4';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -102,6 +102,7 @@ function doPost(e) {
       case 'reserve': return json_(reserve_(b));
       case 'cancel': return json_(cancel_(b));
       case 'waitlist': return json_(waitlist_(b));
+      case 'pass': return json_(pass_(b));
       case 'checkKey': return json_({ ok: isOwner_(b.key) });
       case 'testNotify': return json_(testNotify_(b));
       case 'ownerReserve': return json_(ownerReserve_(b));
@@ -372,10 +373,8 @@ function release_(rows) {
       const token = Utilities.getUuid().replace(/-/g, '');
       const sh = sh_(WAIT_TAB);
       sh.getRange(next.sheetRow, 6, 1, 3).setValues([['Offered', new Date(), token]]);
-      MailApp.sendEmail(next.email, 'It\'s available! Reserve "' + it.name + '" within ' + HOLD_HOURS + ' hours',
-        'Good news — "' + it.name + '" from the move-out sale is available, and we\'re holding it for you.\n\n' +
-        'Pick a pickup time here within ' + HOLD_HOURS + ' hours:\n' + SITE_URL + '?claim=' + token + '\n\n' +
-        "If you don't reserve by then, it will be offered to the next person on the waitlist.");
+      offerEmail_(next.email, it.name, token, 'It\'s available! Reserve "' + it.name + '" within ' + HOLD_HOURS + ' hours',
+        'Good news — "' + it.name + '" from the move-out sale is available, and you\'re next on the waitlist.');
       MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Offered to waitlist: ' + it.name,
         '"' + it.name + '" was offered to ' + next.email + ' (holds for ' + HOLD_HOURS + 'h).');
     }
@@ -391,6 +390,35 @@ function claimInfo_(token) {
   const { list } = itemRows_();
   const it = list.find(i => i.row === w.row);
   return { ok: true, row: w.row, name: it ? it.name : w.name, expires: new Date(w.offeredAt.getTime() + holdHours_(w) * 3600e3).toISOString(), hours: holdHours_(w) };
+}
+
+// Offer email with two buttons: claim (pick a pickup time) or pass (goes to the next person right away).
+function offerEmail_(to, itemName, token, subject, intro) {
+  const sel = seller_(), until = Utilities.formatDate(new Date(Date.now() + HOLD_HOURS * 3600e3), TZ, 'h:mm a');
+  const yes = SITE_URL + '?claim=' + token, no = SITE_URL + '?pass=' + token;
+  const hold = "We're holding it for you for " + HOLD_HOURS + ' hours (until ' + until + '). If we don\'t hear from you by then, it will automatically go to the next person on the waitlist.';
+  const btn = (href, label, bg) => '<a href="' + esc_(href) + '" style="display:inline-block;margin:6px 8px 6px 0;background:' + bg +
+    ';color:#fff;text-decoration:none;font:600 15px -apple-system,sans-serif;padding:12px 18px;border-radius:10px">' + label + '</a>';
+  const P = t => '<p style="font:15px/1.5 -apple-system,sans-serif;color:#222">' + t + '</p>';
+  MailApp.sendEmail(to, subject,
+    'Hi,\n\n' + intro + '\n\nWould you still like it?\nYes — pick a pickup time: ' + yes + '\nNo thanks — pass to the next person: ' + no +
+    '\n\n' + hold + '\n\nThanks!\n' + sel.name,
+    { htmlBody: P('Hi,') + P(esc_(intro)) + P('<b>Would you still like it?</b>') +
+      btn(yes, "Yes, I'll take it — pick a pickup time", '#1f7a4d') + btn(no, 'No thanks, pass', '#8a8a8a') +
+      P(esc_(hold)) + P('Thanks!<br>' + esc_(sel.name)) });
+}
+
+// Buyer passes on a waitlist offer → next person is offered right away.
+function pass_(b) {
+  const w = waitRows_().find(x => x.token && x.token === clean_(b.token, 64));
+  if (!w) return { ok: false, error: 'not found' };
+  if (w.status === 'Claimed') return { ok: false, error: 'claimed' };
+  if (w.status === 'Passed') return { ok: true, already: true, name: w.name };
+  if (w.status !== 'Offered') return { ok: false, error: 'expired' };
+  sh_(WAIT_TAB).getRange(w.sheetRow, 6).setValue('Passed');
+  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Waitlist pass: ' + w.name, w.email + ' passed on "' + w.name + '". Offering it to the next person (if any).');
+  release_([w.row]);
+  return { ok: true, name: w.name };
 }
 
 /* ======================= timer (every 10 min) ======================= */
