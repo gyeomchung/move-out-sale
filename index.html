@@ -152,8 +152,11 @@
   .detail .ghost{padding:11px;font-size:14px}
   @media (max-width:640px){
     .modal .box.detail{grid-template-columns:1fr;max-height:92vh;overflow:auto}
-    .dphoto{min-height:0;max-height:58vh}.dphoto img{max-height:58vh}
-    .dinfo{max-height:none;padding:18px}.dinfo h2{font-size:24px}.dinfo .price{font-size:28px}
+    .dphoto{min-height:0;height:38vh;max-height:38vh}.dphoto img{max-height:38vh;height:38vh}
+    .dinfo{max-height:none;padding:14px 16px 16px;gap:8px}.dinfo h2{font-size:21px}.dinfo .price{font-size:24px}
+    .dbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+    .dbtns .dbtn{grid-column:1/-1;padding:12px}
+    .detail .dbtns .ghost{padding:10px 6px;font-size:13px}
   }
   .q .you{color:var(--accent);font-size:11px}
   .q .tools.confirm{align-items:center;font-size:12px;color:var(--sale)}
