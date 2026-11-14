@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.2';
+const BACKEND_VERSION = '2026-11-14.3';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -307,7 +307,7 @@ function reserve_(b) {
     const sel = seller_();
     MailApp.sendEmail(contact, 'Your move-out sale pickup — ' + nice + ' at ' + time12_(time),
       'Hi ' + name + ',\n\nThanks! Your pickup is reserved (#' + id + ').\n\nPickup: ' + nice + ' at ' + time12_(time) +
-      '\nAddress: ' + sel.address + ' (1 min from Hoyt–Schermerhorn station)' +
+      '\nAddress: ' + sel.address +
       '\nSeller: ' + sel.name + ' — ' + sel.phone + " (text or call if you're running late or have any questions)\n\n" +
       'Items:\n' + list_ + '\nTotal: $' + total + '\n\nPlans changed? Please cancel here so the next person can have it:\n' + cancelUrl +
       '\n\nSee you soon!\n' + sel.name);
