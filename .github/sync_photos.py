@@ -1,11 +1,10 @@
-"""Download each item's Drive photo (sheet column M) to images/<driveId>.jpg if it isn't there yet."""
+"""Download each item's Drive photo (sheet column M; several links = several photos) to images/<driveId>.jpg if it isn't there yet."""
 import json, os, re, subprocess
 
 items = json.load(open('/tmp/items.json'))['items']
 ids = set()
 for it in items:
-    m = re.search(r'(?:/d/|id=)([\w-]{20,})', it.get('photo') or '')
-    if m:
+    for m in re.finditer(r'(?:/d/|id=)([\w-]{20,})', it.get('photo') or ''):   # several photos allowed, one per line
         ids.add(m.group(1))
 
 os.makedirs('images', exist_ok=True)

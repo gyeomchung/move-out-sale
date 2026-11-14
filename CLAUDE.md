@@ -25,7 +25,7 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
 - Pickup slots: Nov 9 – Dec 3; weekdays 6:30–9:30pm starts, weekends 9am–9:30pm starts, 30-min steps, one booking per slot.
 
 ## Photos
-- Sheet column M holds a Drive link per item. The `Sync photos` GitHub Action (on push, every 15 min, or manual)
+- Sheet column M holds Drive link(s) per item — one per line; the first is the card photo, the rest swipe in the detail view. The `Sync photos` GitHub Action (on push, every 15 min, or manual)
   downloads each linked photo to `images/<driveId>.jpg`; the site loads that same-origin copy and only falls back
   to Drive if the copy doesn't exist yet. (Drive hotlinks break on some phones, e.g. Samsung Internet.)
 - Commit as `Gyeom Chung <gyeomchung@users.noreply.github.com>` — never put a personal email in this public repo.
