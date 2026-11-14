@@ -43,3 +43,9 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
   on the next `doGet` after deploy (Script Property `OP_<id>`), and its result (IDs/counts only, no names) is returned
   as `ops` in the public GET. Add a new op with the next id; never reuse or edit an id that already ran.
 - Verify with the `Peek items` GitHub Action (`gh workflow run "Peek items"`), which prints `ops` and matching items.
+
+## Buyer contact info + one-tap texts
+- Pickup address / seller phone / seller name live in Settings!B6:B8 (`seller_()`) — never commit them.
+- New-reservation emails to Gyeom carry a "Text confirmation" button when the buyer left a phone number:
+  it opens `sms.html#to=…&body=…` (data in the fragment only), which launches Messages with the text filled in.
+  Buyers who left an email get a confirmation email with the address and Gyeom's number.

@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-13.8';
+const BACKEND_VERSION = '2026-11-14.1';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -294,15 +294,23 @@ function reserve_(b) {
 
   const nice = niceDate_(date), list_ = lines.map(l => '• ' + l.name + (l.n > 1 ? ' × ' + l.n : '') + ' — $' + (l.unit * l.n)).join('\n');
   const cancelUrl = SITE_URL + '?cancel=' + token;
-  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Pickup reserved — ' + nice + ' ' + time12_(time) + ' · ' + name,
-    'Reservation #' + id + (claim ? ' (from waitlist)' : '') + '\n\nName: ' + name + '\nContact: ' + contact +
+  const r_ = { id: id, name: name, contact: contact, date: date, time: time, total: total,
+    items: lines.map(l => ({ name: l.name, n: l.n })) };
+  const plain = 'Reservation #' + id + (claim ? ' (from waitlist)' : '') + '\n\nName: ' + name + '\nContact: ' + contact +
     '\nPickup: ' + nice + ' at ' + time12_(time) + '\n\nItems:\n' + list_ + '\nTotal: $' + total + (note ? '\n\nNote: ' + note : '') +
-    '\n\nTo cancel: set Status to "Cancelled" in the Reservations tab, or open ' + cancelUrl);
+    '\n\nTo cancel: set Status to "Cancelled" in the Reservations tab, or open ' + cancelUrl;
+  const sms = smsUrl_(r_);
+  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Pickup reserved — ' + nice + ' ' + time12_(time) + ' · ' + name,
+    plain + (sms ? '\n\nText the buyer: ' + sms : ''),
+    { htmlBody: (sms ? smsButton_(r_, sms) + '<br>' : '') + '<pre style="font:14px/1.5 -apple-system,sans-serif;white-space:pre-wrap">' + esc_(plain) + '</pre>' });
   if (isEmail_(contact)) {
+    const sel = seller_();
     MailApp.sendEmail(contact, 'Your move-out sale pickup — ' + nice + ' at ' + time12_(time),
       'Hi ' + name + ',\n\nThanks! Your pickup is reserved (#' + id + ').\n\nPickup: ' + nice + ' at ' + time12_(time) +
-      '\nDowntown Brooklyn, 1 min from Hoyt–Schermerhorn station (exact address will be sent when we confirm).\n\n' +
-      list_ + '\nTotal: $' + total + '\n\nPlans changed? Cancel here so the next person can have it:\n' + cancelUrl);
+      '\nAddress: ' + sel.address + ' (1 min from Hoyt–Schermerhorn station)' +
+      '\nSeller: ' + sel.name + ' — ' + sel.phone + " (text or call if you're running late or have any questions)\n\n" +
+      'Items:\n' + list_ + '\nTotal: $' + total + '\n\nPlans changed? Please cancel here so the next person can have it:\n' + cancelUrl +
+      '\n\nSee you soon!\n' + sel.name);
   }
   return { ok: true, id: id, token: token, total: total };
 }
@@ -573,7 +581,9 @@ const OWNER_OPS = [
   // 2026-11-13: today's buyer didn't show for Monstera Cathy Mint → move it to Bonnie's Sunday (11/15) pickup
   { id: 'OP1', run: () => moveItem_(/monstera.*cathy.*mint/i, '2026-11-13', /bonnie/i, 'Bonnie', '2026-11-15', 'No-show 11/13') },
   // 2026-11-13: today's pottery-wheel buyer drops Bulbasaur A (no discount) → price $40, item goes to waitlist #1
-  { id: 'OP2', run: () => dropToWaitlist_(/bulbasaur.*\(A\)/i, '2026-11-13', /wheel/i, 40) }
+  { id: 'OP2', run: () => dropToWaitlist_(/bulbasaur.*\(A\)/i, '2026-11-13', /wheel/i, 40) },
+  // 2026-11-14: email Gyeom one-tap text buttons for upcoming phone-only pickups
+  { id: 'OP3', run: () => textDigest_('2026-11-14') }
 ];
 function runOwnerOps_() {
   const props = PropertiesService.getScriptProperties();
@@ -672,6 +682,52 @@ function dropToWaitlist_(itemRe, date, otherRe, newPrice) {
   out.waitingBefore = waiting;
   out.offered = waitRows_().filter(w => w.row === it.row && w.status === 'Offered').length;
   return out;
+}
+
+/* ======================= pickup info + one-tap texts ======================= */
+// Address / phone / name live in the sheet (Settings!B6:B8), never in this public repo.
+function seller_() {
+  let v = [['', ''], ['', ''], ['', '']];
+  try { v = ss_().getSheetByName('Settings').getRange('A6:B8').getDisplayValues(); } catch (e) {}
+  return { address: String(v[0][1] || 'Downtown Brooklyn').trim(), phone: String(v[1][1] || '').trim(), name: String(v[2][1] || 'Gyeom').trim() };
+}
+function esc_(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function phoneOf_(contact) {
+  const d = String(contact || '').replace(/\D/g, '');
+  if (isEmail_(contact)) return '';
+  return d.length === 10 ? '+1' + d : (d.length === 11 && d[0] === '1') ? '+' + d : '';
+}
+function smsText_(r) {
+  const sel = seller_(), first = String(r.name || '').trim().split(/\s+/)[0];
+  const items = r.items.map(i => i.name + (i.n > 1 ? ' x' + i.n : '')).join(', ');
+  return 'Hi ' + first + ', this is ' + sel.name + ' from the move-out sale! Your pickup is confirmed for ' +
+    niceDate_(r.date) + ' at ' + time12_(r.time) + '.\n\nAddress: ' + sel.address + ' (1 min from Hoyt–Schermerhorn station)\n' +
+    'Items: ' + items + ' (total $' + r.total + ')\n\nText me at this number if anything changes. See you then!';
+}
+// Link to sms.html on the site; data rides in the #fragment, which browsers never send to the server.
+function smsUrl_(r) {
+  const to = phoneOf_(r.contact); if (!to) return '';
+  return SITE_URL + 'sms.html#to=' + encodeURIComponent(to) + '&body=' + encodeURIComponent(smsText_(r));
+}
+function smsButton_(r, url) {
+  return '<a href="' + esc_(url) + '" style="display:inline-block;background:#1f7a4d;color:#fff;text-decoration:none;font:600 15px -apple-system,sans-serif;padding:12px 18px;border-radius:10px">' +
+    '💬 Text confirmation to ' + esc_(r.name) + '</a>';
+}
+// OP3: one email to Gyeom with a text button for every upcoming phone-only reservation (nothing goes to buyers).
+function textDigest_(fromDate) {
+  const res = resRows_().filter(r => activeRes_(r) && !/picked/i.test(r.status) && r.date >= fromDate && phoneOf_(r.contact))
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  if (!res.length) return { ok: true, sent: 0 };
+  const sh = sh_(RES_TAB), tot = {};
+  res.forEach(r => { tot[r.id] = sh.getRange(r.sheetRow, 4).getDisplayValue(); });
+  const html = res.map(r => {
+    const rr = { id: r.id, name: r.name, contact: r.contact, date: r.date, time: r.time, total: String(tot[r.id]).replace(/[$,]/g, ''), items: r.items };
+    return '<p style="font:14px -apple-system,sans-serif;margin:18px 0 6px"><b>' + esc_(niceDate_(r.date) + ' ' + time12_(r.time)) + '</b> · ' +
+      esc_(r.name) + ' · ' + esc_(r.items.map(i => i.name).join(', ')) + '</p>' + smsButton_(rr, smsUrl_(rr));
+  }).join('');
+  MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] Text confirmations for ' + res.length + ' upcoming pickups',
+    'Open this email in a mail app that shows buttons.', { htmlBody: '<p style="font:14px -apple-system,sans-serif">Tap a button → Messages opens with the text ready → hit send.</p>' + html });
+  return { ok: true, sent: res.length };
 }
 
 function recordOwnerReserve_(b) {

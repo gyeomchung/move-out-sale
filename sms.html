@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Send text</title>
+<style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:480px;margin:40px auto;padding:0 20px;color:#222}
+a.b{display:block;text-align:center;background:#1f7a4d;color:#fff;text-decoration:none;font-weight:600;padding:14px;border-radius:12px;margin:18px 0}
+pre{white-space:pre-wrap;background:#f4f4f2;padding:14px;border-radius:10px;font:14px/1.5 inherit}</style></head>
+<body><p id="to"></p><a class="b" id="go" href="#">Open Messages</a><pre id="msg"></pre>
+<script>
+// Data is in the #fragment (never sent to the server). Opens the phone's Messages app with the text filled in.
+const p = new URLSearchParams(location.hash.slice(1)), to = p.get('to') || '', body = p.get('body') || '';
+const ios = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+const url = 'sms:' + to + (ios ? '&' : '?') + 'body=' + encodeURIComponent(body);
+document.getElementById('to').textContent = 'To: ' + to;
+document.getElementById('msg').textContent = body;
+document.getElementById('go').href = url;
+if (to) location.href = url;
+</script></body></html>
