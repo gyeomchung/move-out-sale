@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.8';
+const BACKEND_VERSION = '2026-11-14.9';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -557,9 +557,13 @@ function icsFeed_(key) {
   resRows_().filter(activeRes_).forEach(r => {
     if (!r.date) return;   // offline deal with no pickup date yet
     const allDay = !r.time;   // date set, time not yet → all-day event
-    let start;
-    try { start = Utilities.parseDate(r.date + ' ' + (r.time || '12:00'), TZ, 'yyyy-MM-dd HH:mm'); } catch (e) { return; }
-    const end = new Date(start.getTime() + 30 * 60e3);
+    // Time may be a range for offline deals, e.g. "10:00-11:00"; otherwise events are 30 minutes.
+    const tm = /^(\d{1,2}:\d{2})(?:\s*[-–]\s*(\d{1,2}:\d{2}))?$/.exec(String(r.time || '').trim());
+    let start, end;
+    try {
+      start = Utilities.parseDate(r.date + ' ' + (tm ? tm[1] : '12:00'), TZ, 'yyyy-MM-dd HH:mm');
+      end = tm && tm[2] ? Utilities.parseDate(r.date + ' ' + tm[2], TZ, 'yyyy-MM-dd HH:mm') : new Date(start.getTime() + 30 * 60e3);
+    } catch (e) { return; }
     const what = r.items.map(i => i.name + (i.n > 1 ? ' × ' + i.n : '')).join(', ');
     const picked = /picked/i.test(r.status) ? '✓ ' : '';
     const desc = 'Reservation #' + r.id + ' (' + r.status + ')\nBuyer: ' + r.name + '\nContact: ' + r.contact +
