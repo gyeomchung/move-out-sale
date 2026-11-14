@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.6';
+const BACKEND_VERSION = '2026-11-14.7';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -141,7 +141,7 @@ function parseResItems_(cell) {
 function resRows_() {
   const sh = sh_(RES_TAB); if (!sh || sh.getLastRow() < 2) return [];
   return sh.getRange(2, 1, sh.getLastRow() - 1, RES_HEAD.length).getDisplayValues().map((r, i) => ({
-    sheetRow: i + 2, id: r[1], items: parseResItems_(r[2]), date: r[4], time: r[5], name: r[6], contact: r[7],
+    sheetRow: i + 2, id: r[1], items: parseResItems_(r[2]), total: String(r[3]).replace(/[$,\s]/g, ''), date: r[4], time: r[5], name: r[6], contact: r[7],
     status: r[9], token: r[10], released: r[11] === 'TRUE'
   })).filter(r => r.id);
 }
@@ -563,10 +563,11 @@ function icsFeed_(key) {
     const what = r.items.map(i => i.name + (i.n > 1 ? ' × ' + i.n : '')).join(', ');
     const picked = /picked/i.test(r.status) ? '✓ ' : '';
     const desc = 'Reservation #' + r.id + ' (' + r.status + ')\nBuyer: ' + r.name + '\nContact: ' + r.contact +
-      '\nItems:\n' + r.items.map(i => '• ' + i.name + (i.n > 1 ? ' × ' + i.n : '')).join('\n') + (r.note ? '\nNote: ' + r.note : '');
+      '\nItems:\n' + r.items.map(i => '• ' + i.name + (i.n > 1 ? ' × ' + i.n : '')).join('\n') +
+      (r.total ? '\n\n받을 금액: $' + r.total : '') + (r.note ? '\nNote: ' + r.note : '');
     lines.push('BEGIN:VEVENT', 'UID:res-' + r.id + '@move-out-sale', 'DTSTAMP:' + now, allDay ? 'DTSTART;VALUE=DATE:' + r.date.replace(/-/g, '') : 'DTSTART:' + utc(start),
       allDay ? 'DTEND;VALUE=DATE:' + Utilities.formatDate(new Date(start.getTime() + 864e5), TZ, 'yyyyMMdd') : 'DTEND:' + utc(end),
-      fold('SUMMARY:' + esc(picked + '픽업: ' + r.name + ' — ' + what)), fold('DESCRIPTION:' + esc(desc)),
+      fold('SUMMARY:' + esc(picked + '픽업: ' + r.name + ' — ' + what + (r.total ? ' · $' + r.total : ''))), fold('DESCRIPTION:' + esc(desc)),
       'LOCATION:Downtown Brooklyn (home)', 'STATUS:CONFIRMED',
       'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc('Pickup: ' + r.name), 'TRIGGER:-PT60M', 'END:VALARM', 'END:VEVENT');
   });
