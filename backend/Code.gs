@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.7';
+const BACKEND_VERSION = '2026-11-14.8';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -631,7 +631,11 @@ const OWNER_OPS = [
   // 2026-11-14 9:10am: same digest again with the shorter text (address only)
   { id: 'OP4', run: () => textDigest_('2026-11-14') },
   // 2026-11-14: Jennifer (OWNER4) won't buy Bulbasaur A → re-offer to waitlist #1 (withdrawn yesterday) with Yes/Pass, 3h hold
-  { id: 'OP5', run: () => reoffer_('OWNER4', /bulbasaur.*\(A\)/i, 'sydneybk2009@gmail.com') }
+  { id: 'OP5', run: () => reoffer_('OWNER4', /bulbasaur.*\(A\)/i, 'sydneybk2009@gmail.com') },
+  // 2026-11-14 12:56pm: Mariana (OWNER3) not coming; tent now $60 → offer to waitlist #1 with Yes/Pass, 3h hold
+  { id: 'OP6', run: () => reoffer_('OWNER3', /^outdoor tent bundle$/i, 'agauci8393@gmail.com',
+      'Outdoor Tent Bundle is available — updated price',
+      "Good news! The Outdoor Tent Bundle is available, and you're #1 on the waitlist. Due to the high volume of inquiries, I've had to raise the price to $60. If that still works for you, I'd love for you to have it!") }
 ];
 function runOwnerOps_() {
   const props = PropertiesService.getScriptProperties();
@@ -778,7 +782,7 @@ function textDigest_(fromDate) {
   return { ok: true, sent: res.length };
 }
 
-function reoffer_(resId, itemRe, email) {
+function reoffer_(resId, itemRe, email, subject, intro) {
   const { list } = itemRows_(), it = list.find(i => itemRe.test(i.name));
   if (!it) return { ok: false, error: 'item' };
   const w = waitRows_().find(x => x.row === it.row && String(x.email).toLowerCase() === email);
@@ -789,13 +793,13 @@ function reoffer_(resId, itemRe, email) {
     if (left.length) sh.getRange(r.sheetRow, 3).setValue(left.map(lineStr_).join('\n'));
     else { sh.getRange(r.sheetRow, 10).setValue('Cancelled'); sh.getRange(r.sheetRow, 12).setValue(true); }
     const n = sh.getRange(r.sheetRow, 9).getValue();
-    sh.getRange(r.sheetRow, 9).setValue((n ? n + ' · ' : '') + 'Buyer decided not to buy ' + it.name + ' (11/14)');
+    sh.getRange(r.sheetRow, 9).setValue((n ? n + ' · ' : '') + 'Buyer did not take ' + it.name + ' (11/14)');
   }
   const token = Utilities.getUuid().replace(/-/g, '');
   sh_(WAIT_TAB).getRange(w.sheetRow, 6, 1, 3).setValues([['Offered', new Date(), token]]);
   syncStatuses_();
-  offerEmail_(w.email, it.name, token, 'Good news — ' + it.name + ' is available again',
-    'Good news! The buyer who was going to take ' + it.name + ' ended up not purchasing it, so it\'s your turn again as #1 on the waitlist. The price is $' + unitPrice_(it) + '.');
+  offerEmail_(w.email, it.name, token, subject || 'Good news — ' + it.name + ' is available again',
+    intro || 'Good news! The buyer who was going to take ' + it.name + ' ended up not purchasing it, so it\'s your turn again as #1 on the waitlist. The price is $' + unitPrice_(it) + '.');
   MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Offered to waitlist: ' + it.name,
     '"' + it.name + '" was offered again to ' + w.email + ' (holds for ' + HOLD_HOURS + 'h, Yes/Pass buttons).');
   return { ok: true, res: resId, offered: 1 };
