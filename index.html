@@ -558,6 +558,15 @@ function renderThread(){
 }
 
 /* ---------- item detail popup ---------- */
+// Share link: ?item=<sheet row> opens that item's detail view directly.
+async function shareItem(btn){
+  const it=items.find(i=>String(i.row)===btn.dataset.share); if(!it) return;
+  const url=location.origin+location.pathname+'?item='+it.row, title=it.name+' — '+fmt(now(it));
+  if(navigator.share){ try{ await navigator.share({title, text:title, url}); return; }catch(err){ if(err && err.name==='AbortError') return; } }
+  try{ await navigator.clipboard.writeText(url); btn.textContent='✓ Link copied'; }
+  catch(_){ window.prompt('Copy this link:', url); }
+  setTimeout(()=>{ btn.textContent='↗ Share this item'; }, 2500);
+}
 function renderDetail(){
   const i = items.find(x=>key(x)===state.detail); if(!i) return;
   const sold=isSold(i), resv=isReserved(i), p=now(i), k=key(i), dropped=p<i.price, claimed=state.claim && state.claim.row===i.row;
@@ -590,6 +599,7 @@ function renderDetail(){
         ${sold ? '' : resv && !claimed ? `<button class="primary dbtn wait" data-wait="${esc(k)}">Join waitlist</button>`
           : `<button class="primary dbtn add${state.bag.has(k)?' on':''}" data-key="${esc(k)}">${state.bag.has(k)?'✓ Added to your list':'+ Add to your list'}</button>`}
         <button class="ghost" data-ask="${esc(k)}">Ask a question${qCount(i)?' ('+qCount(i)+')':''}</button>
+        ${i.row?`<button class="ghost" data-share="${i.row}" type="button">↗ Share this item</button>`:''}
       </div>
     </div>`;
   // Swipeable photos: dots follow the scroll; arrows for mouse users; position survives the 60s refresh.
@@ -614,6 +624,7 @@ document.addEventListener('click', e=>{
   const w=t.closest('[data-wait]'); if(w){ const it=items.find(i=>key(i)===w.dataset.wait); state.waitItem=it; $('waitTitle').textContent=it.name;
     $('waitInfo').textContent = it.waiting ? `${it.waiting} ${it.waiting>1?'people are':'person is'} ahead of you.` : 'You would be first in line.';
     $('waitForm').hidden=false; $('waitDone').hidden=true; $('waitErr').textContent=''; openM('waitModal'); return; }
+  const sh=t.closest('[data-share]'); if(sh){ shareItem(sh); return; }
   const q=t.closest('[data-ask]'); if(q){ state.openItem=q.dataset.ask; renderThread(); openM('itemModal'); return; }
   const cd=t.closest('article.card[data-open]'); if(cd && !t.closest('a,button,select')){ state.detail=cd.dataset.open; renderDetail(); openM('detailModal'); return; }
   const r=t.closest('[data-remove]'); if(r){ state.bag.delete(r.dataset.key); render(); renderBag(); return; }
@@ -728,6 +739,7 @@ async function handleParams(){
       else { $('cancelTitle').textContent='Hold not available'; $('cancelText').textContent = d.error==='expired' ? 'Sorry — the hold on this item has ended and it moved to the next person.' : d.error==='claimed' ? 'This hold was already used to make a reservation.' : 'We could not find this hold.'; $('cancelYes').hidden=true; openM('cancelModal'); }
     }catch(e){}
   }
+  if(p.get('item')){ const it=items.find(i=>String(i.row)===p.get('item')); if(it){ state.detail=key(it); renderDetail(); openM('detailModal'); } }
   if(p.get('ask')){ const it=items.find(i=>String(i.row)===p.get('ask')); if(it){ state.openItem=key(it); renderThread(); openM('itemModal'); } }
   if(p.get('pass')){
     state.passToken=p.get('pass');
