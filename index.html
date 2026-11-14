@@ -59,6 +59,7 @@
   .price{font-family:"Instrument Serif",serif;font-size:30px;line-height:1}
   .was{color:var(--muted);text-decoration:line-through;font-size:13px;white-space:nowrap}
   .off{color:var(--sale);font-weight:600;font-size:12px}
+  .price.sale{color:var(--sale)}
   .actions{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
   .links a{font-size:12px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line);margin-right:8px}
   .links a:hover{color:var(--ink)}
@@ -182,6 +183,7 @@
     .body{padding:5px 6px 6px;gap:3px}
     .name{font-size:10px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
     .meta,.links,.was{display:none}
+    .was.drop{display:inline;font-size:10px}
     .price-row{padding-top:2px;gap:2px 4px}.price{font-size:15px}.off{font-size:9px}
     .actions{flex-direction:column;align-items:stretch;padding-top:5px;margin-top:3px;gap:2px}
     .card-btns{flex-direction:column-reverse;align-items:stretch;gap:1px}
@@ -459,7 +461,7 @@ function card(i){
   const off = i.original ? Math.round((1-p/i.original)*100) : null;
   const bg = `var(--${(i.category||'misc').toLowerCase()}, #e8e4dc)`;
   const resv = isReserved(i), claimed = state.claim && state.claim.row===i.row;
-  const label = sold?'Sold':(resv?'Reserved':(dropped?'Price drop':''));
+  const label = sold?'Sold':(resv?'Reserved':(dropped?`${fmt(i.price-p)} off`:''));
   const links = i.links.map((u,n)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${i.links.length>1?'Item '+(n+1):'Original listing'} ↗</a>`).join('');
   return `<article class="card${sold?' sold':''}${resv?' reserved':''}" data-open="${esc(k)}" tabindex="0" role="button" aria-label="View ${esc(i.name)}">
     <div class="thumb${i.photo?' has-photo':''}" style="background:${bg}">
@@ -475,8 +477,8 @@ function card(i){
         ${resv && i.waiting?`<span class="pill">${i.waiting} on waitlist</span>`:''}
       </div>
       <div class="price-row">
-        <span class="price">${fmt(p)}</span>
-        ${dropped?`<span class="was">${fmt(i.price)}</span>`:''}
+        <span class="price${dropped?' sale':''}">${fmt(p)}</span>
+        ${dropped?`<span class="was drop">${fmt(i.price)}</span>`:''}
         ${i.original?`<span class="was">${fmt(i.original)} new</span>`:''}
         ${off>0?`<span class="off">−${off}%</span>`:''}
       </div>
@@ -587,8 +589,8 @@ function renderDetail(){
     <div class="dinfo">
       <p class="eyebrow">${esc(i.category)}${i.sub?' · '+esc(i.sub):''}</p>
       <h2>${esc(i.name)}</h2>
-      <div class="price-row"><span class="price">${fmt(p)}</span>
-        ${dropped?`<span class="was">${fmt(i.price)}</span>`:''}
+      <div class="price-row"><span class="price${dropped?' sale':''}">${fmt(p)}</span>
+        ${dropped?`<span class="was drop">${fmt(i.price)}</span><span class="off">${fmt(i.price-p)} off</span>`:''}
         ${i.original?`<span class="was">${fmt(i.original)} new</span>`:''}
         ${off>0?`<span class="off">−${off}%</span>`:''}</div>
       <div class="dmeta">
