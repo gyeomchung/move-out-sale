@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.1';
+const BACKEND_VERSION = '2026-11-14.2';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -583,7 +583,9 @@ const OWNER_OPS = [
   // 2026-11-13: today's pottery-wheel buyer drops Bulbasaur A (no discount) → price $40, item goes to waitlist #1
   { id: 'OP2', run: () => dropToWaitlist_(/bulbasaur.*\(A\)/i, '2026-11-13', /wheel/i, 40) },
   // 2026-11-14: email Gyeom one-tap text buttons for upcoming phone-only pickups
-  { id: 'OP3', run: () => textDigest_('2026-11-14') }
+  { id: 'OP3', run: () => textDigest_('2026-11-14') },
+  // 2026-11-14 9:10am: same digest again with the shorter text (address only)
+  { id: 'OP4', run: () => textDigest_('2026-11-14') }
 ];
 function runOwnerOps_() {
   const props = PropertiesService.getScriptProperties();
@@ -701,7 +703,7 @@ function smsText_(r) {
   const sel = seller_(), first = String(r.name || '').trim().split(/\s+/)[0];
   const items = r.items.map(i => i.name + (i.n > 1 ? ' x' + i.n : '')).join(', ');
   return 'Hi ' + first + ', this is ' + sel.name + ' from the move-out sale! Your pickup is confirmed for ' +
-    niceDate_(r.date) + ' at ' + time12_(r.time) + '.\n\nAddress: ' + sel.address + ' (1 min from Hoyt–Schermerhorn station)\n' +
+    niceDate_(r.date) + ' at ' + time12_(r.time) + '.\n\nAddress: ' + sel.address + '\n' +
     'Items: ' + items + ' (total $' + r.total + ')\n\nText me at this number if anything changes. See you then!';
 }
 // Link to sms.html on the site; data rides in the #fragment, which browsers never send to the server.
