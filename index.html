@@ -277,6 +277,7 @@
     <div id="thread"></div>
     <form id="askForm">
       <textarea name="text" required maxlength="600" rows="3" placeholder="Ask a question about this item — you'll appear as an anonymous guest"></textarea>
+      <input name="email" type="email" maxlength="120" placeholder="Email me when there's a reply (optional — never shown)" autocomplete="email" style="margin-top:8px">
       <input name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       <p class="err" id="askErr"></p>
       <button class="primary" type="submit">Post question</button>
@@ -683,7 +684,7 @@ $('cancelYes').addEventListener('click', async e=>{
 $('copyCancel').addEventListener('click', async e=>{ const t=$('cancelLink'); try{ await navigator.clipboard.writeText(t.value); e.target.textContent='Copied ✓'; }catch(_){ t.select(); } });
 $('askForm').addEventListener('submit', async e=>{
   e.preventDefault(); const f=e.target, it=items.find(i=>key(i)===state.openItem), btn=f.querySelector('[type=submit]'); btn.disabled=true; $('askErr').textContent='';
-  try{ const res=await api({action:'comment', item:cKey(it), label:it.name, text:f.text.value, website:f.website.value});
+  try{ const res=await api({action:'comment', item:cKey(it), label:it.name, text:f.text.value, email:f.email.value.trim(), website:f.website.value});
     if(res.ok){ if(res.id && res.token){ myTok[res.id]=res.token; saveTok(); } f.reset(); await load(); renderThread(); } else $('askErr').textContent='Could not post. Please try again.';
   }catch(err){ $('askErr').textContent='Could not reach the server.'; }
   btn.disabled=false;
@@ -727,6 +728,7 @@ async function handleParams(){
       else { $('cancelTitle').textContent='Hold not available'; $('cancelText').textContent = d.error==='expired' ? 'Sorry — the hold on this item has ended and it moved to the next person.' : d.error==='claimed' ? 'This hold was already used to make a reservation.' : 'We could not find this hold.'; $('cancelYes').hidden=true; openM('cancelModal'); }
     }catch(e){}
   }
+  if(p.get('ask')){ const it=items.find(i=>String(i.row)===p.get('ask')); if(it){ state.openItem=key(it); renderThread(); openM('itemModal'); } }
   if(p.get('pass')){
     state.passToken=p.get('pass');
     try{ const d = await (await fetch(CONFIG.apiUrl+'?claim='+encodeURIComponent(state.passToken))).json();

@@ -49,3 +49,7 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
 - New-reservation emails to Gyeom carry a "Text confirmation" button when the buyer left a phone number:
   it opens `sms.html#to=…&body=…` (data in the fragment only), which launches Messages with the text filled in.
   Buyers who left an email get a confirmation email with the address and Gyeom's number.
+
+## Q&A reply notifications
+- Askers may leave an optional email (Comments!K "Email", private, never returned by `comments_`).
+  When Gyeom replies in owner mode, `notifyAsker_` emails them the reply + a `?ask=<row>` link that opens that item's Q&A.

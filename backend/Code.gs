@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.5';
+const BACKEND_VERSION = '2026-11-14.6';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -57,7 +57,7 @@ function setup() {
     sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
     sh.setFrozenRows(1);
   };
-  ensure(COMMENTS_TAB, ['Time', 'ID', 'Item', 'Name', 'Text', 'Reply To', 'Owner', 'Hidden', 'Token', 'Edited']);
+  ensure(COMMENTS_TAB, ['Time', 'ID', 'Item', 'Name', 'Text', 'Reply To', 'Owner', 'Hidden', 'Token', 'Edited', 'Email']);
   ensure(RES_TAB, RES_HEAD);
   ensure(WAIT_TAB, WAIT_HEAD);
   const res = ss.getSheetByName(RES_TAB);
@@ -202,7 +202,8 @@ function comment_(b) {
   if (!text || !item) return { ok: false, error: 'empty' };
   const id = Utilities.getUuid().slice(0, 8), name = 'Guest ' + id.slice(0, 4).toUpperCase();
   const token = Utilities.getUuid().replace(/-/g, '');   // lets this (anonymous) author edit/delete later
-  sh_(COMMENTS_TAB).appendRow([new Date(), id, item, name, text, '', false, false, token, '']);
+  const email = isEmail_(clean_(b.email, 120)) ? clean_(b.email, 120) : '';   // optional: notify on reply (private, never returned)
+  sh_(COMMENTS_TAB).appendRow([new Date(), id, item, name, text, '', false, false, token, '', email]);
   MailApp.sendEmail(ownerEmail_(), '[Move-Out Sale] New question: ' + label,
     name + ' asked about "' + label + '":\n\n' + text + '\n\nReply in owner mode: ' + SITE_URL + '#owner');
   return { ok: true, id: id, token: token };
@@ -213,7 +214,8 @@ function reply_(b) {
   const text = clean_(b.text, 1000);
   if (!text) return { ok: false, error: 'empty' };
   const id = Utilities.getUuid().slice(0, 8);
-  sh_(COMMENTS_TAB).appendRow([new Date(), id, clean_(b.item, 200), 'Owner', text, clean_(b.parent, 20), true, false, '', '']);
+  sh_(COMMENTS_TAB).appendRow([new Date(), id, clean_(b.item, 200), 'Owner', text, clean_(b.parent, 20), true, false, '', '', '']);
+  try { notifyAsker_(clean_(b.parent, 20), clean_(b.item, 200), text); } catch (e) {}
   return { ok: true, id: id };
 }
 
@@ -253,6 +255,19 @@ function hide_(b) {
   const ids = sh.getRange(2, 2, sh.getLastRow() - 1, 1).getValues();
   ids.forEach((r, i) => { if (r[0] === b.id) sh.getRange(i + 2, 8).setValue(true); });
   return { ok: true };
+}
+
+// Email the guest who asked (if they left an email) when Gyeom replies to their question.
+function notifyAsker_(parentId, itemKey, replyText) {
+  if (!parentId) return;
+  const sh = sh_(COMMENTS_TAB); if (sh.getLastRow() < 2) return;
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, 11).getValues();
+  const q = rows.find(r => r[1] === parentId); if (!q || !isEmail_(q[10])) return;
+  const it = itemRows_().list.find(i => itemKey.indexOf(i.name + ' · ') === 0);
+  const name = it ? it.name : String(itemKey).replace(/ · \$.*$/, ''), link = SITE_URL + (it ? '?ask=' + it.row : '');
+  MailApp.sendEmail(q[10], 'Your question about "' + name + '" got a reply',
+    'Hi,\n\nYou asked about "' + name + '":\n"' + q[4] + '"\n\n' + seller_().name + ' replied:\n"' + replyText + '"\n\n' +
+    'See the conversation or reserve a pickup here:\n' + link + '\n\nThanks!');
 }
 
 /* ======================= reservations ======================= */
