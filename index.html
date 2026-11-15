@@ -60,6 +60,7 @@
   .was{color:var(--muted);text-decoration:line-through;font-size:13px;white-space:nowrap}
   .off{color:var(--sale);font-weight:600;font-size:12px}
   .price.sale{color:var(--sale)}
+  .linkbtn{border:0;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer;font-weight:600}
   .actions{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
   .links a{font-size:12px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line);margin-right:8px}
   .links a:hover{color:var(--ink)}
@@ -297,8 +298,9 @@
     <h2 id="waitTitle"></h2>
     <p class="hint" id="waitInfo"></p>
     <label>Your email<input name="email" type="email" required maxlength="120" autocomplete="email"></label>
+    <label>Phone (optional)<input name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="So the seller can text you when it's your turn"></label>
     <input name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <p class="hint">If the reservation is cancelled, we'll email you a link and hold it for you for 3 hours.</p>
+    <p class="hint">If it frees up, we'll email you a link and hold it for you for 12 hours.</p>
     <p class="err" id="waitErr"></p>
     <button class="primary" type="submit">Join waitlist</button>
     <button class="ghost" type="button" data-mclose>Cancel</button>
@@ -563,6 +565,19 @@ function renderThread(){
 
 /* ---------- item detail popup ---------- */
 // Share link: ?item=<sheet row> opens that item's detail view directly.
+// Catch common email-domain typos (gmail.co, gmail.comf, gmial.com…). First submit shows a suggestion; submitting again keeps it as typed.
+const MAIL_DOMAINS=['gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','aol.com','me.com','live.com','msn.com','protonmail.com','comcast.net','verizon.net'];
+function editDist(a,b){ const d=Array.from({length:a.length+1},(_,i)=>[i]); for(let j=1;j<=b.length;j++) d[0][j]=j;
+  for(let i=1;i<=a.length;i++) for(let j=1;j<=b.length;j++) d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); return d[a.length][b.length]; }
+function emailFix(v){ const m=/^([^@\s]+)@([^@\s]+)$/.exec(String(v).trim()); if(!m) return ''; const dom=m[2].toLowerCase();
+  if(MAIL_DOMAINS.includes(dom)) return ''; let best='',bd=9; MAIL_DOMAINS.forEach(x=>{ const k=editDist(dom,x); if(k<bd){bd=k;best=x;} });
+  return bd<=2 ? m[1]+'@'+best : ''; }
+function typoGuard(input, errEl){ const v=input.value.trim(), fix=emailFix(v);
+  if(!fix || input.dataset.okTypo===v) return false;
+  input.dataset.okTypo=v;
+  errEl.innerHTML=`Did you mean <b>${esc(fix)}</b>? <button type="button" class="linkbtn" data-fixmail="${esc(fix)}">Use this</button> — or tap the button again to keep what you typed.`;
+  errEl.querySelector('[data-fixmail]').onclick=()=>{ input.value=fix; errEl.textContent=''; input.focus(); };
+  return true; }
 async function shareItem(btn){
   const it=items.find(i=>String(i.row)===btn.dataset.share); if(!it) return;
   const url=location.origin+location.pathname+'?item='+it.row, title=it.name+' — '+fmt(now(it));
@@ -652,6 +667,7 @@ document.addEventListener('click', e=>{
 
 $('contactForm').addEventListener('submit', async e=>{
   e.preventDefault(); const f=e.target, btn=f.querySelector('[type=submit]'); btn.disabled=true; $('contactErr').textContent='';
+  if(/@/.test(f.contact.value) && typoGuard(f.contact, $('contactErr'))){ btn.disabled=false; return; }
   const sel=selected();
   try{
     const res = await api({action:'reserve', items:sel.map(i=>({row:i.row, name:i.name, n:cnt(i)})), claim:state.claim?state.claim.token:'', date:state.day, time:state.time,
@@ -675,8 +691,9 @@ $('contactForm').addEventListener('submit', async e=>{
 document.addEventListener('change', e=>{ const s=e.target.closest('[data-n]'); if(s){ state.n[s.dataset.n]=+s.value; renderBag(); } });
 $('waitForm').addEventListener('submit', async e=>{
   e.preventDefault(); const f=e.target, it=state.waitItem, btn=f.querySelector('[type=submit]'); btn.disabled=true; $('waitErr').textContent='';
-  try{ const res=await api({action:'waitlist', row:it.row, name:it.name, email:f.email.value, website:f.website.value});
-    if(res.ok){ $('waitDoneText').textContent = res.already ? `You're already on the list for “${it.name}”.` : `You're #${res.position} for “${it.name}”. If it frees up, we'll email ${f.email.value} a link to reserve it — you'll have 3 hours to book.`;
+  if(typoGuard(f.email, $('waitErr'))){ btn.disabled=false; return; }
+  try{ const res=await api({action:'waitlist', row:it.row, name:it.name, email:f.email.value.trim(), phone:f.phone.value.trim(), website:f.website.value});
+    if(res.ok){ $('waitDoneText').textContent = res.already ? `You're already on the list for “${it.name}”.` : `You're #${res.position} for “${it.name}”. If it frees up, we'll email ${f.email.value.trim()} a link to reserve it — you'll have 12 hours to book.`;
       f.reset(); $('waitForm').hidden=true; $('waitDone').hidden=false; load(); }
     else $('waitErr').textContent = res.error==='email' ? 'Please enter a valid email.' : 'Could not join the waitlist. Please try again.';
   }catch(err){ $('waitErr').textContent='Could not reach the server.'; }
@@ -699,6 +716,7 @@ $('cancelYes').addEventListener('click', async e=>{
 $('copyCancel').addEventListener('click', async e=>{ const t=$('cancelLink'); try{ await navigator.clipboard.writeText(t.value); e.target.textContent='Copied ✓'; }catch(_){ t.select(); } });
 $('askForm').addEventListener('submit', async e=>{
   e.preventDefault(); const f=e.target, it=items.find(i=>key(i)===state.openItem), btn=f.querySelector('[type=submit]'); btn.disabled=true; $('askErr').textContent='';
+  if(f.email.value.trim() && typoGuard(f.email, $('askErr'))){ btn.disabled=false; return; }
   try{ const res=await api({action:'comment', item:cKey(it), label:it.name, text:f.text.value, email:f.email.value.trim(), website:f.website.value});
     if(res.ok){ if(res.id && res.token){ myTok[res.id]=res.token; saveTok(); } f.reset(); await load(); renderThread(); } else $('askErr').textContent='Could not post. Please try again.';
   }catch(err){ $('askErr').textContent='Could not reach the server.'; }

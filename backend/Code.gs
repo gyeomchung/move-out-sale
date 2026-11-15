@@ -24,15 +24,15 @@ const SITE_URL = 'https://gyeomchung.github.io/move-out-sale/';
 const SHEET_ID = '1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk';
 const ITEMS_TAB = 'Move Out Sale', COMMENTS_TAB = 'Comments', RES_TAB = 'Reservations', WAIT_TAB = 'Waitlist';
 const TZ = 'America/New_York';
-const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
+const HOLD_HOURS = 12;   // waitlist hold (was 3h from 2026-11-13 4:40pm to 2026-11-15 8:30am; none of those are still live)
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-15.1';
+const BACKEND_VERSION = '2026-11-15.2';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
 const RES_HEAD = ['Time', 'ID', 'Items', 'Total', 'Pickup Date', 'Pickup Time', 'Name', 'Contact', 'Note', 'Status', 'Token', 'Released'];
-const WAIT_HEAD = ['Time', 'ID', 'Row', 'Item', 'Email', 'Status', 'Offered At', 'Token'];
+const WAIT_HEAD = ['Time', 'ID', 'Row', 'Item', 'Email', 'Status', 'Offered At', 'Token', 'Phone'];
 
 // Owner's notification email lives in the sheet (Settings!B1), not in this public code
 // Owner + extra people (Settings!B5) for reservation emails: new pickups, cancellations and waitlist activity
@@ -149,7 +149,7 @@ function resRows_() {
 function waitRows_() {
   const sh = sh_(WAIT_TAB); if (!sh || sh.getLastRow() < 2) return [];
   return sh.getRange(2, 1, sh.getLastRow() - 1, WAIT_HEAD.length).getValues().map((r, i) => ({
-    sheetRow: i + 2, id: r[1], row: +r[2], name: r[3], email: r[4], status: r[5], offeredAt: r[6], token: r[7]
+    sheetRow: i + 2, id: r[1], row: +r[2], name: r[3], email: r[4], status: r[5], offeredAt: r[6], token: r[7], phone: String(r[8] || '')
   })).filter(r => r.id);
 }
 
@@ -377,11 +377,12 @@ function waitlist_(b) {
   const mine = wait.find(w => w.row === it.row && String(w.email).toLowerCase() === email.toLowerCase() && /waiting|offered/i.test(w.status));
   const ahead = wait.filter(w => w.row === it.row && w.status === 'Waiting').length;
   if (mine) return { ok: true, position: ahead, already: true };
-  sh_(WAIT_TAB).appendRow([new Date(), Utilities.getUuid().slice(0, 8), it.row, it.name, email, 'Waiting', '', '']);
+  const phone = String(b.phone || '').replace(/[^\d+]/g, '').replace(/\D/g, '').length >= 10 ? clean_(b.phone, 30) : '';
+  sh_(WAIT_TAB).appendRow([new Date(), Utilities.getUuid().slice(0, 8), it.row, it.name, email, 'Waiting', '', '', phone ? "'" + phone : '']);
   MailApp.sendEmail(email, "You're on the waitlist — " + it.name,
     "Thanks! You're #" + (ahead + 1) + ' on the waitlist for "' + it.name + '".\n\n' +
     "If it frees up, we'll email you a link to reserve it. You'll have " + HOLD_HOURS + ' hours to book before it goes to the next person.\n\n' + SITE_URL);
-  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Waitlist: ' + it.name, email + ' joined the waitlist (#' + (ahead + 1) + ') for "' + it.name + '".');
+  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Waitlist: ' + it.name, email + (phone ? ' / ' + phone : '') + ' joined the waitlist (#' + (ahead + 1) + ') for "' + it.name + '".');
   release_([it.row]);    // in case a unit is actually free right now
   return { ok: true, position: ahead + 1 };
 }
@@ -403,8 +404,7 @@ function release_(rows) {
       sh.getRange(next.sheetRow, 6, 1, 3).setValues([['Offered', new Date(), token]]);
       offerEmail_(next.email, it.name, token, 'It\'s available! Reserve "' + it.name + '" within ' + HOLD_HOURS + ' hours',
         'Good news — "' + it.name + '" from the move-out sale is available, and you\'re next on the waitlist.');
-      MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Offered to waitlist: ' + it.name,
-        '"' + it.name + '" was offered to ' + next.email + ' (holds for ' + HOLD_HOURS + 'h).');
+      offerNotice_(next, it, token);
     }
   });
   syncStatuses_();
@@ -434,6 +434,21 @@ function offerEmail_(to, itemName, token, subject, intro) {
     { htmlBody: P('Hi,') + P(esc_(intro)) + P('<b>Would you still like it?</b>') +
       btn(yes, "Yes, I'll take it — pick a pickup time", '#1f7a4d') + btn(no, 'No thanks, pass', '#8a8a8a') +
       P(esc_(hold)) + P('Thanks!<br>' + esc_(sel.name)) });
+}
+
+// Tell Gyeom (and Settings!B5) who got the offer, with their contact and — if they left a phone — a one-tap text nudge.
+function offerNotice_(w, it, token) {
+  const until = Utilities.formatDate(new Date(Date.now() + HOLD_HOURS * 3600e3), TZ, 'EEE h:mm a');
+  const claim = SITE_URL + '?claim=' + token, sel = seller_();
+  const text = 'Hi! This is ' + sel.name + ' from the move-out sale. "' + it.name + '" just became available and you\'re next on the waitlist! ' +
+    'I emailed you the reserve link (' + w.email + ') — it\'s held for you until ' + until + '. You can also reserve here: ' + claim;
+  const to = phoneOf_(w.phone);
+  const sms = to ? SITE_URL + 'sms.html#to=' + encodeURIComponent(to) + '&body=' + encodeURIComponent(text) : '';
+  const plain = '"' + it.name + '" was offered to the next person on the waitlist (holds until ' + until + ').\n\nEmail: ' + w.email +
+    '\nPhone: ' + (w.phone || '(not given)') + '\nTheir reserve link: ' + claim + (sms ? '\n\nText them: ' + sms : '');
+  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Offered to waitlist: ' + it.name, plain,
+    { htmlBody: (sms ? smsButton_({ name: w.email }, sms).replace('Text confirmation to', 'Text a heads-up to') + '<br>' : '') +
+      '<pre style="font:14px/1.5 -apple-system,sans-serif;white-space:pre-wrap">' + esc_(plain) + '</pre>' });
 }
 
 // Buyer passes on a waitlist offer → next person is offered right away.
@@ -817,8 +832,7 @@ function reoffer_(resId, itemRe, email, subject, intro) {
   syncStatuses_();
   offerEmail_(w.email, it.name, token, subject || 'Good news — ' + it.name + ' is available again',
     intro || 'Good news! The buyer who was going to take ' + it.name + ' ended up not purchasing it, so it\'s your turn again as #1 on the waitlist. The price is $' + unitPrice_(it) + '.');
-  MailApp.sendEmail(reservationEmails_(), '[Move-Out Sale] Offered to waitlist: ' + it.name,
-    '"' + it.name + '" was offered again to ' + w.email + ' (holds for ' + HOLD_HOURS + 'h, Yes/Pass buttons).');
+  offerNotice_(w, it, token);
   return { ok: true, res: resId, offered: 1 };
 }
 
