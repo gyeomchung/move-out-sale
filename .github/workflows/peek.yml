@@ -13,4 +13,4 @@ jobs:
           export Q='${{ inputs.q }}'
           API=$(grep -o 'https://script.google.com/macros/s/[^"]*/exec' index.html | head -1)
           curl -sSL "$API" > d.json; curl -sSL "$API" > d.json
-          node -e "const d=require('./d.json');console.log('v',d.v,'ops',JSON.stringify(d.ops));(d.items||[]).filter(i=>new RegExp(process.env.Q||'.','i').test(i.name)).forEach(i=>console.log(JSON.stringify({name:i.name,status:i.status,price:i.price,drop:i.drop,avail:i.avail,qty:i.qty})))"
+          node -e "const d=require('./d.json');console.log('booked1119',JSON.stringify((d.booked||[]).filter(x=>x.startsWith('2026-11-19'))));console.log('v',d.v,'ops',JSON.stringify(d.ops));(d.items||[]).filter(i=>new RegExp(process.env.Q||'.','i').test(i.name)).forEach(i=>console.log(JSON.stringify({name:i.name,status:i.status,price:i.price,drop:i.drop,avail:i.avail,qty:i.qty})))"
