@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.10';
+const BACKEND_VERSION = '2026-11-15.1';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -491,7 +491,7 @@ function validSlot_(date, time) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(time); if (!m) return false;
   const mins = (+m[1]) * 60 + (+m[2]); if (mins % 30) return false;
   const dow = new Date(date + 'T12:00:00').getDay(), weekend = dow === 0 || dow === 6;
-  return weekend ? (mins >= 9 * 60 && mins <= 21 * 60 + 30) : (mins >= 18 * 60 + 30 && mins <= 21 * 60 + 30);
+  return weekend ? (mins >= 10 * 60 && mins <= 21 * 60 + 30) : (mins >= 18 * 60 + 30 && mins <= 21 * 60 + 30);
 }
 function niceDate_(d) { return Utilities.formatDate(new Date(d + 'T12:00:00'), TZ, 'EEE, MMM d'); }
 function time12_(t) { const m = /^(\d+):(\d+)$/.exec(t); if (!m) return t; const h = +m[1]; return ((h + 11) % 12 + 1) + ':' + m[2] + (h < 12 ? 'am' : 'pm'); }

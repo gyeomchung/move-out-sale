@@ -218,7 +218,7 @@
 <main class="wrap">
   <div id="list"></div>
   <section class="info">
-    <div><h3>Pickup</h3><p>Downtown Brooklyn, 1 min from Hoyt–Schermerhorn station. Weekdays 6:30–10pm, weekends 9am–10pm. Exact address shared when we confirm.</p></div>
+    <div><h3>Pickup</h3><p>Downtown Brooklyn, 1 min from Hoyt–Schermerhorn station. Weekdays 6:30–10pm, weekends 10am–10pm. Exact address shared when we confirm.</p></div>
     <div><h3>Questions</h3><p>Tap “Ask” on any item. Questions are anonymous and answered here by the owner, so everyone can see the answer.</p></div>
     <div><h3>How to reserve</h3><p>Add items to your list, pick a pickup time (Nov 9 – Dec 3), and leave your contact. We'll message you to confirm. Already reserved? Join the waitlist and we'll email you if it frees up.</p></div>
   </section>
@@ -499,7 +499,7 @@ function days(){ const out=[]; const d=new Date(CONFIG.firstDay+'T12:00:00'), en
   for(;d<=end;d.setDate(d.getDate()+1)){ const iso=d.toISOString().slice(0,10); if(iso>=t.date && !CONFIG.blockedDays.includes(iso)) out.push({iso, dow:d.getDay(), label:d.toLocaleDateString('en-US',{weekday:'short'}), num:d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}); }
   return out; }
 function times(day){ const we=day.dow===0||day.dow===6, out=[], t=etNow();
-  for(let m=(we?9*60:18*60+30); m<=21*60+30; m+=30){ const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
+  for(let m=(we?10*60:18*60+30); m<=21*60+30; m+=30){ const hh=String(Math.floor(m/60)).padStart(2,'0'), mm=String(m%60).padStart(2,'0');
     const h12=((Math.floor(m/60)+11)%12)+1, label=`${h12}:${mm}${m<12*60?'am':'pm'}`;
     const past = day.iso===t.date && m<=t.mins+60;
     out.push({v:`${hh}:${mm}`, label, off: past || booked.has(`${day.iso} ${hh}:${mm}`)}); }

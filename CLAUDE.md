@@ -22,7 +22,7 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
 ## Rules
 - Reserved is computed: qty − active reservations − live waitlist holds (3h; offers made before 2026-11-13 4:40pm ET keep 24h). Backend syncs Posted ⇄ Reserved.
 - Owner cancels by setting Reservations Status = Cancelled (processed by `tick` within 10 min).
-- Pickup slots: Nov 9 – Dec 3; weekdays 6:30–9:30pm starts, weekends 9am–9:30pm starts, 30-min steps, one booking per slot.
+- Pickup slots: Nov 9 – Dec 3; weekdays 6:30–9:30pm starts, weekends 10am–9:30pm starts, 30-min steps, one booking per slot.
 
 ## Photos
 - Sheet column M holds Drive link(s) per item — one per line; the first is the card photo, the rest swipe in the detail view. The `Sync photos` GitHub Action (on push, every 15 min, or manual)
