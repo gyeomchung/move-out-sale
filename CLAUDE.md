@@ -36,6 +36,7 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
 - Reservation, cancellation and owner-side waitlist emails (joined / offered) also go to the addresses in Settings!B5 (`reservationEmails_`).
 - Blocked pickup days: sheet Settings!B4 (comma-separated YYYY-MM-DD, store as text). Backend rejects them and
   returns them as `blocked`; the site hides those days.
+- Blocked time ranges: Settings!B9, comma-separated "YYYY-MM-DD HH:MM-HH:MM" (`blockedSlots_`), returned inside `booked` so those slots show as taken.
 
 ## Owner changes without touching the sheet
 - Gyeom does NOT open the sheet — Claude makes every data change. Claude has no sheet/owner-key access from its

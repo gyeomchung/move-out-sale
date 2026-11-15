@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 3;   // waitlist hold for offers made from 2026-11-13 4:40pm ET on
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-14.9';
+const BACKEND_VERSION = '2026-11-14.10';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -273,7 +273,20 @@ function notifyAsker_(parentId, itemKey, replyText) {
 /* ======================= reservations ======================= */
 
 function booked_() {
-  return resRows_().filter(activeRes_).map(r => r.date + ' ' + r.time);
+  return resRows_().filter(activeRes_).map(r => r.date + ' ' + r.time).concat(blockedSlots_());
+}
+// Settings!B9: blocked time ranges, comma-separated "YYYY-MM-DD HH:MM-HH:MM" (end exclusive), e.g. "2026-11-19 18:00-20:00".
+// Each 30-min start inside a range is returned as taken, so the site greys it out and reserve_ rejects it.
+function blockedSlots_() {
+  let raw = '';
+  try { raw = ss_().getSheetByName('Settings').getRange('B9').getDisplayValue(); } catch (e) { return []; }
+  const out = [];
+  String(raw).split(',').forEach(part => {
+    const m = /^\s*(\d{4}-\d{2}-\d{2})\s+(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\s*$/.exec(part); if (!m) return;
+    for (let t = +m[2] * 60 + +m[3]; t < +m[4] * 60 + +m[5]; t += 30)
+      out.push(m[1] + ' ' + ('0' + Math.floor(t / 60)).slice(-2) + ':' + ('0' + t % 60).slice(-2));
+  });
+  return out;
 }
 
 function reserve_(b) {
