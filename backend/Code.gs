@@ -663,9 +663,9 @@ const OWNER_OPS = [
   // 2026-11-14 9:10am: same digest again with the shorter text (address only)
   { id: 'OP4', run: () => textDigest_('2026-11-14') },
   // 2026-11-14: Jennifer (OWNER4) won't buy Bulbasaur A → re-offer to waitlist #1 (withdrawn yesterday) with Yes/Pass, 3h hold
-  { id: 'OP5', run: () => reoffer_('OWNER4', /bulbasaur.*\(A\)/i, 'sydneybk2009@gmail.com') },
+  { id: 'OP5', run: () => reoffer_('OWNER4', /bulbasaur.*\(A\)/i, '' /* buyer email removed — op already ran */) },
   // 2026-11-14 12:56pm: Mariana (OWNER3) not coming; tent now $60 → offer to waitlist #1 with Yes/Pass, 3h hold
-  { id: 'OP6', run: () => reoffer_('OWNER3', /^outdoor tent bundle$/i, 'agauci8393@gmail.com',
+  { id: 'OP6', run: () => reoffer_('OWNER3', /^outdoor tent bundle$/i, '' /* buyer email removed — op already ran */,
       'Outdoor Tent Bundle is available — updated price',
       "Good news! The Outdoor Tent Bundle is available, and you're #1 on the waitlist. Due to the high volume of inquiries, I've had to raise the price to $60. If that still works for you, I'd love for you to have it!") },
   // 2026-11-15 10:48pm: Elizabeth (97DBFB) no-show → release everything except Staghorn Fern (waitlist gets first dibs)

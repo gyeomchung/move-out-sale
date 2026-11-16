@@ -29,6 +29,7 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
   downloads each linked photo to `images/<driveId>.jpg`; the site loads that same-origin copy and only falls back
   to Drive if the copy doesn't exist yet. (Drive hotlinks break on some phones, e.g. Samsung Internet.)
 - Commit as `Gyeom Chung <gyeomchung@users.noreply.github.com>` — never put a personal email in this public repo.
+- Never put buyer contacts (emails, phones) in code — this repo is public. Look them up from the sheet at runtime (e.g. by reservation ID / waitlist position).
 
 ## Calendar feed
 - `<web app URL>?ics=<key>` serves active reservations as an iCalendar feed ("Move Out Sale"), which Gyeom subscribes
