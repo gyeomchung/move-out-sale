@@ -27,7 +27,7 @@ const TZ = 'America/New_York';
 const HOLD_HOURS = 12;   // waitlist hold (was 3h from 2026-11-13 4:40pm to 2026-11-15 8:30am; none of those are still live)
 const OLD_HOLD_HOURS = 24, HOLD_CUTOFF = new Date('2026-11-13T21:40:00Z').getTime();   // earlier offers keep 24h
 function holdHours_(w) { return w && w.offeredAt instanceof Date && w.offeredAt.getTime() < HOLD_CUTOFF ? OLD_HOLD_HOURS : HOLD_HOURS; }
-const BACKEND_VERSION = '2026-11-15.2';
+const BACKEND_VERSION = '2026-11-15.3';
 const REPO_RAW = 'https://raw.githubusercontent.com/gyeomchung/move-out-sale/main/backend/';
 const DEPLOYMENT_ID = 'AKfycbz3KhKAzisUaMzxDfwU4BhsvnoH68_72IV1nV2qgzuWifbI9KT_vqxpRxsMn7b3tYLt';
 
@@ -667,7 +667,9 @@ const OWNER_OPS = [
   // 2026-11-14 12:56pm: Mariana (OWNER3) not coming; tent now $60 → offer to waitlist #1 with Yes/Pass, 3h hold
   { id: 'OP6', run: () => reoffer_('OWNER3', /^outdoor tent bundle$/i, 'agauci8393@gmail.com',
       'Outdoor Tent Bundle is available — updated price',
-      "Good news! The Outdoor Tent Bundle is available, and you're #1 on the waitlist. Due to the high volume of inquiries, I've had to raise the price to $60. If that still works for you, I'd love for you to have it!") }
+      "Good news! The Outdoor Tent Bundle is available, and you're #1 on the waitlist. Due to the high volume of inquiries, I've had to raise the price to $60. If that still works for you, I'd love for you to have it!") },
+  // 2026-11-15 10:48pm: Elizabeth (97DBFB) no-show → release everything except Staghorn Fern (waitlist gets first dibs)
+  { id: 'OP7', run: () => releaseFromRes_('97DBFB', [/^monstera aurea 4\.5"$/i, /^anthurium dark phoenix$/i, /^anthurium red velvet cake/i], 'No-show 11/15') },
 ];
 function runOwnerOps_() {
   const props = PropertiesService.getScriptProperties();
@@ -834,6 +836,25 @@ function reoffer_(resId, itemRe, email, subject, intro) {
     intro || 'Good news! The buyer who was going to take ' + it.name + ' ended up not purchasing it, so it\'s your turn again as #1 on the waitlist. The price is $' + unitPrice_(it) + '.');
   offerNotice_(w, it, token);
   return { ok: true, res: resId, offered: 1 };
+}
+
+// Take some items off a reservation (no-show etc.) and release them: waitlist first, otherwise back to Posted.
+function releaseFromRes_(resId, itemRes, note) {
+  const r = resRows_().find(x => x.id === resId);
+  if (!r || !activeRes_(r)) return { ok: false, error: 'reservation' };
+  const { list } = itemRows_(), sh = sh_(RES_TAB);
+  const drop = r.items.filter(i => itemRes.some(re => re.test(i.name)));
+  if (drop.length !== itemRes.length) return { ok: false, error: 'matched ' + drop.length };
+  const left = r.items.filter(i => drop.indexOf(i) < 0);
+  const minus = drop.reduce((a, i) => { const it = list.find(x => x.row === i.row); return a + (it ? unitPrice_(it) * i.n : 0); }, 0);
+  const tot = parseFloat(String(sh.getRange(r.sheetRow, 4).getValue()).replace(/[$,]/g, '')) || 0;
+  if (left.length) { sh.getRange(r.sheetRow, 3).setValue(left.map(lineStr_).join('\n')); sh.getRange(r.sheetRow, 4).setValue(Math.max(0, tot - minus)); }
+  else { sh.getRange(r.sheetRow, 10).setValue('Cancelled'); sh.getRange(r.sheetRow, 12).setValue(true); }
+  const n = sh.getRange(r.sheetRow, 9).getValue();
+  sh.getRange(r.sheetRow, 9).setValue((n ? n + ' · ' : '') + note + ': released ' + drop.map(i => i.name).join(', '));
+  release_(drop.map(i => i.row));
+  const wait = waitRows_();
+  return { ok: true, released: drop.length, left: left.length, offered: drop.filter(i => wait.some(w => w.row === i.row && w.status === 'Offered')).length };
 }
 
 function recordOwnerReserve_(b) {
