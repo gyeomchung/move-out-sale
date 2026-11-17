@@ -14,7 +14,7 @@ Owner: Gyeom (notification email lives in the sheet's Settings!B1 — never put 
   does this automatically after every push that touches `backend/`.
   Never break `selfUpdate_` / `doGet` — a broken updater can't fix itself. Always `node --check` before pushing.
 - Google Sheet `1OctIxn2ZInOi_aG52P9nQw3arQ-1KNTbg22BYzFSdCk`
-  - `Move Out Sale` tab: items. Status dropdown: Posted / Reserved / Sold / On Hold. "Price Drop" (col E) = discounted public price, shown as a sale. Photo column holds Drive link(s). Columns shift — always look them up by header.
+  - `Move Out Sale` tab: items. Status dropdown: Posted / Reserved / Sold / On Hold. "Price Drop" (col E) = discounted public price, shown on the site as the plain price (no sale badge). Photo column holds Drive link(s). Columns shift — always look them up by header.
     Public price = "Initial Price" (older name "Price"). "Final Price" = private negotiated sale price, never shown.
     Columns are found by header name — if Gyeom renames a header, update the lookups in Code.gs and index.html.
   - `Comments`, `Reservations`, `Waitlist` tabs are written by the backend.

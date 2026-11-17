@@ -460,7 +460,7 @@ function render(){
 }
 
 function card(i){
-  const sold=isSold(i), p=now(i), k=key(i), dropped = p<i.price;
+  const sold=isSold(i), p=now(i), k=key(i), dropped = false;   // discounts show as the plain final price (no tag, no strike-through)
   const off = i.original ? Math.round((1-p/i.original)*100) : null;
   const bg = `var(--${(i.category||'misc').toLowerCase()}, #e8e4dc)`;
   const resv = isReserved(i), claimed = state.claim && state.claim.row===i.row;
@@ -590,7 +590,7 @@ async function shareItem(btn){
 }
 function renderDetail(){
   const i = items.find(x=>key(x)===state.detail); if(!i) return;
-  const sold=isSold(i), resv=isReserved(i), p=now(i), k=key(i), dropped=p<i.price, claimed=state.claim && state.claim.row===i.row;
+  const sold=isSold(i), resv=isReserved(i), p=now(i), k=key(i), dropped=false, claimed=state.claim && state.claim.row===i.row;
   const off = i.original ? Math.round((1-p/i.original)*100) : null;
   const status = sold ? 'Sold' : resv ? 'Reserved' : (i.qty>1 ? `${avail(i)} of ${i.qty} left` : 'Available');
   const links = i.links.map((u,n)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${i.links.length>1?'Original listing '+(n+1):'Original listing'} ↗</a>`).join('');
